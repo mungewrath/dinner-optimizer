@@ -104,6 +104,11 @@ def lambda_handler(event, context):
         except SlackApiError as e:
             logger.error("Error uploading file: {}".format(e))
 
+    slack_client.chat_postMessage(
+        channel=CHANNEL_ID,
+        text="Post in the channel if you'd like to request any tweaks!",
+    )
+
     return {
         "statusCode": 200,
         "body": json.dumps({"response": menu}),
