@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "menu-suggester"
+version = "0.1.0"
+description = "Suggests meals for the user based on preferences and special requests for the week"
+authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "menu_suggester"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^0.27.8"
+python-dotenv = "^1.0.0"
+slack-sdk = "^3.21.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
