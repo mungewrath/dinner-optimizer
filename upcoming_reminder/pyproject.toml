@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "upcoming-reminder"
+version = "0.1.0"
+description = "Reminds users that meal suggestions will be posted later, and ask for any special requests"
+authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
+license = "MIT"
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+python-dotenv = "^1.0.0"
+slack-sdk = "^3.21.3"
+boto3 = "^1.28.31"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+app = "src.upcoming_reminder.app:cli"
