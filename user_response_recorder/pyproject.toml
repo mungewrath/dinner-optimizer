@@ -1,16 +1,14 @@
 [tool.poetry]
-name = "menu-suggester"
+name = "user-response-recorder"
 version = "0.1.0"
-description = "Suggests meals for the user based on preferences and special requests for the week"
+description = "When users respond with requests or tweaks, records it to storage and sets a timer to respond if applicable"
 authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-openai = "^0.27.8"
 python-dotenv = "^1.0.0"
 slack-sdk = "^3.21.3"
-boto3 = "^1.28.53"
 
 
 [build-system]

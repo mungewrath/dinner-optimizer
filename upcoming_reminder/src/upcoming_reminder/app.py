@@ -17,6 +17,7 @@ SECRET_NAME = "dinner-optimizer-credentials"
 
 
 def lambda_handler(event, context):
+    # TODO - this is superseded by secrets manager
     # load_dotenv()
 
     # SLACK_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
@@ -27,7 +28,7 @@ def lambda_handler(event, context):
 
     slack_client.chat_postMessage(
         channel=CHANNEL_ID,
-        text="It's time to meal plan soon! Post before 2pm with any special requests you might have, and I'll include them.",
+        text="*It's time to meal plan soon!*\n\nPost before 2pm with any special requests you might have, and I'll include them.",
     )
 
     return {

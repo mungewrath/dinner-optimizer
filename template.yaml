@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   dinner-optimizer
@@ -13,24 +13,24 @@ Globals:
 
 Resources:
   DinnerOptimizerFunctionRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service: lambda.amazonaws.com
-              Action: sts:AssumeRole
-        Policies:
-          - PolicyName: LambdaSecretsManagerAccess
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - secretsmanager:GetSecretValue
-                  Resource: '*'
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaSecretsManagerAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: "*"
 
   MenuSuggesterFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -38,21 +38,30 @@ Resources:
       CodeUri: menu_suggester/src/menu_suggester/
       Handler: app.lambda_handler
       Runtime: python3.10
-      Role: !GetAtt DinnerOptimizerFunctionRole.Arn
+      # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserResponseTable
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: "*"
       Environment:
         Variables:
           OPENAI_API_KEY: Defined in local environment
           SLACK_BOT_TOKEN: Defined in local environment
       Architectures:
         - x86_64
-      Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Properties:
-            Path: /hello
-            Method: get
       Tags:
         Project: DinnerOptimizer
+
+  MenuSuggesterTrigger:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: MenuSuggesterTrigger
+      ScheduleExpression: cron(0 23 ? * SAT *) # Every Saturday at 11 PM UTC
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt MenuSuggesterFunction.Arn
+          Id: MenuSuggesterTarget
 
   UpcomingReminderFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -60,7 +69,40 @@ Resources:
       CodeUri: upcoming_reminder/src/upcoming_reminder/
       Handler: app.lambda_handler
       Runtime: python3.10
-      Role: !GetAtt DinnerOptimizerFunctionRole.Arn
+      # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: "*"
+      Environment:
+        Variables:
+          OPENAI_API_KEY: Defined in local environment
+          SLACK_BOT_TOKEN: Defined in local environment
+      Architectures:
+        - x86_64
+      Tags:
+        Project: DinnerOptimizer
+
+  UpcomingReminderTrigger:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: UpcomingReminderTrigger
+      ScheduleExpression: cron(0 16 ? * SAT *) # Every Saturday at 4 PM UTC
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt UpcomingReminderFunction.Arn
+          Id: UpcomingReminderTarget
+
+  UserResponseRecorderFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: user_response_recorder/src/user_response_recorder/
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserResponseTable
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: "*"
       Environment:
         Variables:
           OPENAI_API_KEY: Defined in local environment
@@ -68,24 +110,39 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        HelloWorld:
+        UserResponse:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /yello
-            Method: get
+            Path: /user_response
+            Method: post
       Tags:
         Project: DinnerOptimizer
 
+  UserResponseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserResponseTable
+      AttributeDefinitions:
+        - AttributeName: Week
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Week
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      # Ignored due to on-demand billing mode
+      ProvisionedThroughput:
+        ReadCapacityUnits: 0
+        WriteCapacityUnits: 0
 # Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  # HelloWorldApi:
-  #   Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  # HelloWorldFunction:
-  #   Description: "Hello World Lambda Function ARN"
-  #   Value: !GetAtt HelloWorldFunction.Arn
-  # HelloWorldFunctionIamRole:
-  #   Description: "Implicit IAM Role created for Hello World function"
-  #   Value: !GetAtt HelloWorldFunctionRole.Arn
+# ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+# Find out more about other implicit resources you can reference within SAM
+# https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+# HelloWorldApi:
+#   Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+#   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+# HelloWorldFunction:
+#   Description: "Hello World Lambda Function ARN"
+#   Value: !GetAtt HelloWorldFunction.Arn
+# HelloWorldFunctionIamRole:
+#   Description: "Implicit IAM Role created for Hello World function"
+#   Value: !GetAtt HelloWorldFunctionRole.Arn

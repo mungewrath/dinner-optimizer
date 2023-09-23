@@ -14,6 +14,25 @@
     },
 
     {
+      "name": "Direct: User Response Recorder",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/user_response_recorder/src/user_response_recorder/app.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+
+    {
+      "name": "Direct: Menu Suggester",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/menu_suggester/src/menu_suggester/app.py",
+      "cwd": "${workspaceFolder}/menu_suggester/src/menu_suggester",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+
+    {
       "type": "aws-sam",
       "request": "direct-invoke",
       "name": "Upcoming reminder",

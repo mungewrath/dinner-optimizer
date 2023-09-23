@@ -1,0 +1,4 @@
+requests
+python-dotenv
+slack-sdk
+urllib3<2
