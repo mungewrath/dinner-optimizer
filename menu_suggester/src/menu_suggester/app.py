@@ -2,18 +2,17 @@ import base64
 import json
 import openai
 import boto3
-from botocore.exceptions import ClientError
 
 import logging
 from slack_sdk import WebClient
+import dinner_optimizer_shared.credentials_handler as creds
+import dinner_optimizer_shared.message_persistence as db
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 consoleHandler = logging.StreamHandler()
 logger.addHandler(consoleHandler)
-
-SECRET_NAME = "dinner-optimizer-credentials"
 
 TABLE_NAME = "UserResponseTable"
 
@@ -28,7 +27,7 @@ dynamodb = boto3.client("dynamodb")
 
 
 def lambda_handler(event, context):
-    credentials = fetch_creds_from_secrets_manager()
+    credentials = creds.fetch_creds_from_secrets_manager()
 
     # Set your OpenAI API key
     openai.api_key = credentials["OPENAI_API_KEY"]
@@ -66,7 +65,7 @@ def lambda_handler(event, context):
     messages.append(
         {
             "role": "user",
-            "content": "Generate a new set of suggested dinners for this week.",
+            "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
         }
     )
 
@@ -102,7 +101,11 @@ def lambda_handler(event, context):
                                     },
                                 },
                             },
-                        }
+                        },
+                        "commentary": {
+                            "type": "string",
+                            "description": "A detailed meal-by-meal description, explaining what factors led to the meal being chosen, and whether it takes the user's special requests into account",
+                        },
                     },
                 },
             }
@@ -112,20 +115,19 @@ def lambda_handler(event, context):
     logger.info("OpenAI response: %s", json.dumps(response, indent=2))
 
     menu = json.loads(response.choices[0].message.function_call.arguments)
-    # menu = json.loads(MEAL_STUB)
 
     recorded_message = "Here's your suggested menu for this week:"
 
     slack_client.chat_postMessage(
         channel=CHANNEL_ID,
-        text=recorded_message,
+        text=recorded_message + "\n" + menu["commentary"],
     )
 
     recorded_message += "\n"
     for meal in menu["meal_list"]:
         recorded_message += f"{meal['meal_name']} - {meal['meal_description']}\n"
 
-    record_conversation_message(
+    db.record_conversation_message(
         {
             "role": {"S": "assistant"},
             "time": {"S": f"{WEEK_STUB} 08:00:00"},
@@ -153,6 +155,11 @@ def lambda_handler(event, context):
 
     slack_client.chat_postMessage(
         channel=CHANNEL_ID,
+        text=menu["commentary"],
+    )
+
+    slack_client.chat_postMessage(
+        channel=CHANNEL_ID,
         # text="Post in the channel if you'd like to request any tweaks!",
         text="Let me know if there are any customizations you want after looking, and I can re-think the list.",
     )
@@ -161,24 +168,6 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({"response": menu}),
     }
-
-
-def fetch_creds_from_secrets_manager():
-    region_name = "us-west-2"
-
-    # Create a Secrets Manager client
-    session = boto3.session.Session()
-    client = session.client(service_name="secretsmanager", region_name=region_name)
-
-    try:
-        get_secret_value_response = client.get_secret_value(SecretId=SECRET_NAME)
-    except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        raise e
-
-    credentials = json.loads(get_secret_value_response["SecretString"])
-    return credentials
 
 
 def post_meal_photo(slack_client, meal, any_meals_failed_to_upload):
@@ -204,27 +193,6 @@ def post_meal_photo(slack_client, meal, any_meals_failed_to_upload):
         any_meals_failed_to_upload = True
 
     return any_meals_failed_to_upload
-
-
-def record_conversation_message(entry):
-    # Retrieve the existing item based on the key
-    response = dynamodb.get_item(TableName=TABLE_NAME, Key={"Week": {"S": WEEK_STUB}})
-
-    # Get any existing item
-    existing_item = (
-        response["Item"]
-        if "Item" in response
-        else {"Week": {"S": WEEK_STUB}, "Interactions": {"L": []}}
-    )
-
-    existing_item["Interactions"]["L"].append({"M": entry})
-
-    dynamodb.update_item(
-        TableName=TABLE_NAME,
-        Key={"Week": {"S": WEEK_STUB}},
-        UpdateExpression="SET Interactions = :interactions",
-        ExpressionAttributeValues={":interactions": existing_item["Interactions"]},
-    )
 
 
 def dall_e_api_call(meal_description):

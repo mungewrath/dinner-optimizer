@@ -7,10 +7,11 @@ license = "MIT"
 
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 python-dotenv = "^1.0.0"
 slack-sdk = "^3.21.3"
 boto3 = "^1.28.31"
+dinner-optimizer-shared = {path = "../shared", develop = true}
 
 
 [build-system]

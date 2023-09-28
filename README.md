@@ -10,7 +10,7 @@ Task log: See Todo list.md
 ## Deploying
 
 (To be scripted)
-1. Generate requirements files from poetry `poetry export -f requirements.txt --output requirements.txt --without-hashes`
+1. Generate requirements files from poetry `poetry export -f requirements.txt --output src/<nested folder>/requirements.txt --without-hashes`
 1. `sam build`
 1. `sam deploy --guided`
 

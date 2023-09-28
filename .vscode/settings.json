@@ -1,9 +1,13 @@
 {
-    "pylint.args": [
-        "--good-names=a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z",
-        "--disable=missing-module-docstring",
-        "--disable=missing-class-docstring",
-        "--disable=missing-function-docstring"
-    ],
-    "editor.formatOnSave": true
+  "pylint.args": [
+    "--good-names=a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z",
+    "--disable=missing-module-docstring",
+    "--disable=missing-class-docstring",
+    "--disable=missing-function-docstring",
+    "import sys; sys.path.append('${workspaceFolder}/shared/src/dinner_optimizer_shared')"
+  ],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/shared/src/dinner_optimizer_shared"
+  ],
+  "editor.formatOnSave": true
 }

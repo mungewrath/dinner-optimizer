@@ -9,6 +9,7 @@ license = "MIT"
 python = "^3.11"
 python-dotenv = "^1.0.0"
 slack-sdk = "^3.21.3"
+dinner-optimizer-shared = {path = "../shared", develop = true}
 
 
 [build-system]

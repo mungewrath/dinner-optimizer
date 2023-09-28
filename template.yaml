@@ -37,10 +37,11 @@ Resources:
     Properties:
       CodeUri: menu_suggester/src/menu_suggester/
       Handler: app.lambda_handler
-      Runtime: python3.10
+      Runtime: python3.11
+      Timeout: 90
       # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
       Policies:
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref UserResponseTable
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
@@ -52,23 +53,25 @@ Resources:
         - x86_64
       Tags:
         Project: DinnerOptimizer
+      Events:
+        ComplexScheduleEvent:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(5 minutes)
+            ScheduleExpressionTimezone: UTC
+            # RetryPolicy:
+            #   MaximumRetryAttempts: 5
+            #   MaximumEventAgeInSeconds: 300
+            # DeadLetterConfig:
+            #   Type: SQS
 
-  MenuSuggesterTrigger:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: MenuSuggesterTrigger
-      ScheduleExpression: cron(0 23 ? * SAT *) # Every Saturday at 11 PM UTC
-      State: ENABLED
-      Targets:
-        - Arn: !GetAtt MenuSuggesterFunction.Arn
-          Id: MenuSuggesterTarget
 
   UpcomingReminderFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: upcoming_reminder/src/upcoming_reminder/
       Handler: app.lambda_handler
-      Runtime: python3.10
+      Runtime: python3.11
       # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
@@ -97,7 +100,7 @@ Resources:
     Properties:
       CodeUri: user_response_recorder/src/user_response_recorder/
       Handler: app.lambda_handler
-      Runtime: python3.10
+      Runtime: python3.11
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UserResponseTable

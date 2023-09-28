@@ -29,7 +29,10 @@
       "program": "${workspaceFolder}/menu_suggester/src/menu_suggester/app.py",
       "cwd": "${workspaceFolder}/menu_suggester/src/menu_suggester",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/shared/src/dinner_optimizer_shared"
+      }
     },
 
     {
