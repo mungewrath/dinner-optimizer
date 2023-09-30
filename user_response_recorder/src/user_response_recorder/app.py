@@ -5,6 +5,7 @@ from slack_sdk import WebClient
 
 from dinner_optimizer_shared import credentials_handler as creds
 from dinner_optimizer_shared import message_persistence as db
+from dinner_optimizer_shared import time_utils
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -14,8 +15,6 @@ logger.addHandler(consoleHandler)
 
 CHANNEL_ID = "C05JEBJHNQ4"
 BOT_USER_ID = "U05L9285S6A"
-
-WEEK = "07-29-2023"
 
 
 def lambda_handler(event, context):
@@ -32,10 +31,10 @@ def lambda_handler(event, context):
         logger.info("Hearing myself; exiting without actions")
         return api_gateway_response({})
 
-    # TODO: Parse date and time
+    current_week = time_utils.most_recent_saturday()
     entry = {
         "role": {"S": "user"},
-        "time": {"S": f"{WEEK} 08:00:00"},
+        "time": {"S": f"{current_week} {time_utils.current_time()}"},
         "text": {"S": user_response},
     }
 
@@ -43,7 +42,7 @@ def lambda_handler(event, context):
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
 
-    db.record_conversation_message(entry)
+    db.record_conversation_message(entry, current_week)
 
     logger.info("Item updated successfully.")
 

@@ -4,7 +4,6 @@ import boto3
 dynamodb = boto3.client("dynamodb")
 
 TABLE_NAME = "UserResponseTable"
-WEEK = "07-29-2023"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -13,22 +12,22 @@ consoleHandler = logging.StreamHandler()
 logger.addHandler(consoleHandler)
 
 
-def record_conversation_message(entry):
+def record_conversation_message(entry, week):
     # Retrieve the existing item based on the key
-    response = dynamodb.get_item(TableName=TABLE_NAME, Key={"Week": {"S": WEEK}})
+    response = dynamodb.get_item(TableName=TABLE_NAME, Key={"Week": {"S": week}})
 
     # Get any existing item
     existing_item = (
         response["Item"]
         if "Item" in response
-        else {"Week": {"S": WEEK}, "Interactions": {"L": []}}
+        else {"Week": {"S": week}, "Interactions": {"L": []}}
     )
 
     existing_item["Interactions"]["L"].append({"M": entry})
 
     dynamodb.update_item(
         TableName=TABLE_NAME,
-        Key={"Week": {"S": WEEK}},
+        Key={"Week": {"S": week}},
         UpdateExpression="SET Interactions = :interactions",
         ExpressionAttributeValues={":interactions": existing_item["Interactions"]},
     )

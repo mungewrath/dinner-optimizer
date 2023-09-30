@@ -7,6 +7,7 @@ import logging
 from slack_sdk import WebClient
 import dinner_optimizer_shared.credentials_handler as creds
 import dinner_optimizer_shared.message_persistence as db
+import dinner_optimizer_shared.time_utils as time_utils
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -17,7 +18,6 @@ logger.addHandler(consoleHandler)
 TABLE_NAME = "UserResponseTable"
 
 MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and Sauerkraut",\n      "meal_description": "Grilled sausages served with sauerkraut and mustard"\n    },\n    {\n      "meal_name": "Vegetable Stir-Fry",\n      "meal_description": "Assorted vegetables stir-fried with soy sauce and garlic"\n    },\n    {\n      "meal_name": "Korean Bibimbap",\n      "meal_description": "Mixed rice bowl topped with sautéed vegetables, tofu, and a fried egg"\n    },\n    {\n      "meal_name": "Spaghetti Carbonara",\n      "meal_description": "Pasta tossed in a creamy sauce with eggs, cheese, and bacon"\n    }\n  ]\n}'
-WEEK_STUB = "07-29-2023"
 
 CHANNEL_ID = "C05JEBJHNQ4"
 
@@ -34,19 +34,23 @@ def lambda_handler(event, context):
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
 
+    current_week = time_utils.most_recent_saturday()
+
     # Load priming instruction for LLM from priming_instruction.txt
     with open("priming_instruction.txt") as f:
         priming_instruction = f.read()
 
     # TODO: This code is shared, pull into helper
     # Load existing chat messages for the past week from Dynamo
-    response = dynamodb.get_item(TableName=TABLE_NAME, Key={"Week": {"S": WEEK_STUB}})
+    response = dynamodb.get_item(
+        TableName=TABLE_NAME, Key={"Week": {"S": current_week}}
+    )
 
     # Get any existing item
     existing_item = (
         response["Item"]
         if "Item" in response
-        else {"Week": {"S": WEEK_STUB}, "Interactions": {"L": []}}
+        else {"Week": {"S": current_week}, "Interactions": {"L": []}}
     )
 
     interactions = sorted(
@@ -130,9 +134,10 @@ def lambda_handler(event, context):
     db.record_conversation_message(
         {
             "role": {"S": "assistant"},
-            "time": {"S": f"{WEEK_STUB} 08:00:00"},
+            "time": {"S": f"{current_week} {time_utils.current_time()}"},
             "text": {"S": recorded_message},
-        }
+        },
+        current_week,
     )
 
     any_meals_failed_to_upload = False

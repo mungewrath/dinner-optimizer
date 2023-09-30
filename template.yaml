@@ -84,6 +84,12 @@ Resources:
         - x86_64
       Tags:
         Project: DinnerOptimizer
+      Events:
+        MorningTrigger:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 16 ? * SAT *)
+            ScheduleExpressionTimezone: UTC
 
   UpcomingReminderTrigger:
     Type: AWS::Events::Rule

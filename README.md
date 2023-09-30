@@ -11,7 +11,7 @@ Task log: See Todo list.md
 
 (To be scripted)
 1. Generate requirements files from poetry `poetry export -f requirements.txt --output src/<nested folder>/requirements.txt --without-hashes`
-1. `sam build`
+1. `sam build --no-cached` - it needs to be non-cached to pick up changes to the shared/ module in other lambdas
 1. `sam deploy --guided`
 
 ## Fetch, tail, and filter Lambda function logs
