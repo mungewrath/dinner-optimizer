@@ -23,6 +23,17 @@ def record_conversation_message(entry, week):
         else {"Week": {"S": week}, "Interactions": {"L": []}}
     )
 
+    if any(
+        x["M"]["timestamp"] == entry["timestamp"]
+        for x in existing_item["Interactions"]["L"]
+    ):
+        logger.info(
+            "Entry with message '%s' and timestamp %s already exists in record; skipping write",
+            entry["text"],
+            entry["timestamp"],
+        )
+        return
+
     existing_item["Interactions"]["L"].append({"M": entry})
 
     dynamodb.update_item(
