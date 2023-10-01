@@ -7,9 +7,11 @@
 	[X] Account for receiving requests and follow-up
 	[X] Need to have user_response_recorder respond to the hook, and post in channel
       [X] Prevent it from going into an infinite loop by checking user ID
+	  [ ] Tie API to SQS queue (which triggers Lambda) in order to consistently meet Slack's SLA
 	  [ ] Consider reaction to message, instead of posting an explicit message reply
-	  [ ] No dupe handling currently, need to prevent multiple db messages / slack responses
+	  [X] No dupe handling currently, need to prevent multiple db messages / slack responses
 	[X] Test (stub) menu_suggester with chat history
+	[ ] Post multiple pictures at once, not individually
 [ ] Lambda construction
 	[X] Call OpenAI
 	[X] Call Dall-E, chaining off prompts

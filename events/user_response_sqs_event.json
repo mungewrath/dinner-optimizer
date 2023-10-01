@@ -1,0 +1,21 @@
+{
+  "Records": [
+    {
+      "messageId": "92c93dc6-edea-4c22-aa89-77d1df718c38",
+      "receiptHandle": "AQEBoqsFO0iQnJcY4ziLJE0kIFWxB5XuVOC7mZiufw2oB2D18FzkhEAMNfFhUYR265uC3EbZ2WQjg1T7dSDVUhMuh/1/Bank2ESaUBG4NXB2rogZSsFbntBz5nR6Eu26CXqbYwRUmmffiDFxEZh9MRQhNvGlCpesOo0rFVeUvtoSYXal3uYjVU4QxTUoiCl6AoCMOd7aoWYhtM6MMUoDHta0L3dHRu7+7pMOB7NiJjYLixCJOrnUEuAOssUHqTrOSQh6TNuw+LBPLo2VGEO/pe6ee504bPJfScKzqeP33CcO7C5wJByTjqMA9G0p/46HK7GHKatjd9QeEmNz12Jz4WlAG4eMQSOmHo2U7oC4Z2xDntS9redigOalUNoFMXa6eJpDnk/7H8mARJfHboAFgaME6ANYVPlPdOq0dmMLxl/9hMtHffQ1BqcwJB4vEX1loTtD",
+      "body": "{\"token\":\"7kqwwLKsSI5EFKHvepHBZjCQ\",\"team_id\":\"T05K1K7K5TJ\",\"context_team_id\":\"T05K1K7K5TJ\",\"context_enterprise_id\":null,\"api_app_id\":\"A05LCPE500M\",\"event\":{\"client_msg_id\":\"199b139c-5ea7-4be6-a371-1846c71b1ea5\",\"type\":\"message\",\"text\":\"would like a way to use up lentils in something other than a soup\",\"user\":\"U05JQH9JN57\",\"ts\":\"1696042947.448099\",\"blocks\":[{\"type\":\"rich_text\",\"block_id\":\"BebPw\",\"elements\":[{\"type\":\"rich_text_section\",\"elements\":[{\"type\":\"text\",\"text\":\"would like a way to use up lentils in something other than a soup\"}]}]}],\"team\":\"T05K1K7K5TJ\",\"channel\":\"C05JEBJHNQ4\",\"event_ts\":\"1696042947.448099\",\"channel_type\":\"channel\"},\"type\":\"event_callback\",\"event_id\":\"Ev05ULBYSQG3\",\"event_time\":1696042947,\"authorizations\":[{\"enterprise_id\":null,\"team_id\":\"T05K1K7K5TJ\",\"user_id\":\"U05L9285S6A\",\"is_bot\":true,\"is_enterprise_install\":false}],\"is_ext_shared_channel\":false,\"event_context\":\"4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDVLMUs3SzVUSiIsImFpZCI6IkEwNUxDUEU1MDBNIiwiY2lkIjoiQzA1SkVCSkhOUTQifQ\"}",
+      "attributes": {
+        "ApproximateReceiveCount": "3",
+        "AWSTraceHeader": "Root=1-6518e59a-76b1f3a4073438c2263130b6",
+        "SentTimestamp": "1696130458928",
+        "SenderId": "AROASJDKAE2KJ6EFRIRHX:BackplaneAssumeRoleSession",
+        "ApproximateFirstReceiveTimestamp": "1696130481224"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "212dc638b38a6d003c9cc18d3efefc04",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-west-2:156988614292:dinner-optimizer-UserResponseQueue-Rs9y3uhsoHfU",
+      "awsRegion": "us-west-2"
+    }
+  ]
+}
