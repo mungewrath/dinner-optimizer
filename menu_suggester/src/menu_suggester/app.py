@@ -1,5 +1,6 @@
 import base64
 import json
+import time
 import openai
 import boto3
 
@@ -131,11 +132,13 @@ def lambda_handler(event, context):
     for meal in menu["meal_list"]:
         recorded_message += f"{meal['meal_name']} - {meal['meal_description']}\n"
 
+    # TODO: Pull into helper method
     db.record_conversation_message(
         {
             "role": {"S": "assistant"},
             "time": {"S": f"{current_week} {time_utils.current_time()}"},
             "text": {"S": recorded_message},
+            "timestamp": {"S": f"{time.time()}"},
         },
         current_week,
     )
