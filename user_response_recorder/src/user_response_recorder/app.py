@@ -20,8 +20,16 @@ BOT_USER_ID = "U05L9285S6A"
 def lambda_handler(event, context):
     logger.info(json.dumps(event))
 
-    payload = json.loads(event["body"])["event"]
+    for r in event["Records"]:
+        payload = json.loads(r["body"])["event"]
+        handle_user_message(payload)
 
+    response = {}
+
+    return api_gateway_response(body=response)
+
+
+def handle_user_message(payload):
     logger.info(json.dumps(payload))
 
     timestamp = payload["ts"]
@@ -53,10 +61,6 @@ def lambda_handler(event, context):
         text=f">{user_response}\nGot it :thumbsup:",
     )
 
-    response = {}
-
-    return api_gateway_response(body=response)
-
 
 def api_gateway_response(body):
     return {
@@ -68,10 +72,11 @@ def api_gateway_response(body):
 
 
 def cli():
+    with open("events/user_response_sqs_event.json", "r") as f:
+        event = json.load(f)
+
     lambda_handler(
-        {
-            "body": '{"token":"7kqwwLKsSI5EFKHvepHBZjCQ","team_id":"T05K1K7K5TJ","context_team_id":"T05K1K7K5TJ","context_enterprise_id":null,"api_app_id":"A05LCPE500M","event":{"client_msg_id":"199b139c-5ea7-4be6-a371-1846c71b1ea5","type":"message","text":"would like a way to use up lentils in something other than a soup","user":"U05JQH9JN57","ts":"1696042947.448099","blocks":[{"type":"rich_text","block_id":"BebPw","elements":[{"type":"rich_text_section","elements":[{"type":"text","text":"would like a way to use up lentils in something other than a soup"}]}]}],"team":"T05K1K7K5TJ","channel":"C05JEBJHNQ4","event_ts":"1696042947.448099","channel_type":"channel"},"type":"event_callback","event_id":"Ev05ULBYSQG3","event_time":1696042947,"authorizations":[{"enterprise_id":null,"team_id":"T05K1K7K5TJ","user_id":"U05L9285S6A","is_bot":true,"is_enterprise_install":false}],"is_ext_shared_channel":false,"event_context":"4-eyJldCI6Im1lc3NhZ2UiLCJ0aWQiOiJUMDVLMUs3SzVUSiIsImFpZCI6IkEwNUxDUEU1MDBNIiwiY2lkIjoiQzA1SkVCSkhOUTQifQ"}'
-        },
+        event,
         None,
     )
 

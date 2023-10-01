@@ -68,22 +68,6 @@ Resources:
   UserResponseQueue:
     Type: AWS::SQS::Queue
 
-  # UserResponseHandlerFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     FunctionName: UserResponseHandlerFunction
-  #     Handler: index.handler
-  #     Runtime: nodejs14.x
-  #     # Policies:
-  #     #   - SQSPollerPolicy:
-  #     #       QueueName: !GetAtt UserResponseQueue.QueueName
-  #     Events:
-  #       MySQSEvent:
-  #           Type: SQS
-  #           Properties:
-  #             Queue: !GetAtt UserResponseQueue.Arn
-  #             BatchSize: 1
-
   DispatcherSQSAPIRole:
     Type: AWS::IAM::Role
     Properties:
@@ -130,7 +114,7 @@ Resources:
                       $ref: "#/components/schemas/SlackEvent"
               responses:
                 "200":
-                  description: Event post successfully handled and placed on queue
+                  description: Event post successfully placed on queue for handling
                 "400":
                   description: Bad Request
                 "500":
@@ -207,11 +191,11 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        UserResponse:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        SQSEventMessage:
+          Type: SQS
           Properties:
-            Path: /user_response
-            Method: post
+            Queue: !GetAtt UserResponseQueue.Arn
+            BatchSize: 1
       Tags:
         Project: DinnerOptimizer
 
