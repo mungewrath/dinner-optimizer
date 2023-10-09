@@ -7,8 +7,9 @@ import boto3
 import logging
 from slack_sdk import WebClient
 import dinner_optimizer_shared.credentials_handler as creds
-import dinner_optimizer_shared.message_persistence as db
+import dinner_optimizer_shared.message_persistence as persistence
 import dinner_optimizer_shared.time_utils as time_utils
+from dinner_optimizer_shared.interaction import Interaction
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -41,31 +42,14 @@ def lambda_handler(event, context):
     with open("priming_instruction.txt") as f:
         priming_instruction = f.read()
 
-    # TODO: This code is shared, pull into helper
-    # Load existing chat messages for the past week from Dynamo
-    response = dynamodb.get_item(
-        TableName=TABLE_NAME, Key={"Week": {"S": current_week}}
-    )
-
-    # Get any existing item
-    existing_item = (
-        response["Item"]
-        if "Item" in response
-        else {"Week": {"S": current_week}, "Interactions": {"L": []}}
-    )
-
-    interactions = sorted(
-        existing_item["Interactions"]["L"], key=lambda x: x["M"]["time"]["S"]
-    )
-
-    logger.info("interactions: %s", json.dumps(interactions, indent=2))
+    interactions = persistence.retrieve_interactions_for_week(current_week)
 
     messages = [
         {"role": "system", "content": priming_instruction},
     ]
 
     for i in interactions:
-        messages.append({"role": i["M"]["role"]["S"], "content": i["M"]["text"]["S"]})
+        messages.append({"role": i.role, "content": i.text})
 
     messages.append(
         {
@@ -81,7 +65,7 @@ def lambda_handler(event, context):
         model=MODEL,
         messages=messages,
         max_tokens=2000,
-        temperature=0.3,
+        temperature=0.5,
         n=1,
         stop=None,
         functions=[
@@ -132,14 +116,14 @@ def lambda_handler(event, context):
     for meal in menu["meal_list"]:
         recorded_message += f"{meal['meal_name']} - {meal['meal_description']}\n"
 
-    # TODO: Pull into helper method
-    db.record_conversation_message(
-        {
-            "role": {"S": "assistant"},
-            "time": {"S": f"{current_week} {time_utils.current_time()}"},
-            "text": {"S": recorded_message},
-            "timestamp": {"S": f"{time.time()}"},
-        },
+    interaction = Interaction(
+        role="assistant",
+        time=f"{current_week} {time_utils.current_time()}",
+        text=recorded_message,
+        timestamp=f"{time.time()}",
+    )
+    persistence.record_conversation_message(
+        interaction,
         current_week,
     )
 

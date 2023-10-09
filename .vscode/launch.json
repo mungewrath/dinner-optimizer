@@ -9,8 +9,7 @@
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/upcoming_reminder/src/upcoming_reminder/app.py",
-      "console": "integratedTerminal",
-      "justMyCode": true
+      "console": "integratedTerminal"
     },
 
     {
@@ -29,10 +28,7 @@
       "program": "${workspaceFolder}/menu_suggester/src/menu_suggester/app.py",
       "cwd": "${workspaceFolder}/menu_suggester/src/menu_suggester",
       "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/shared/src/dinner_optimizer_shared"
-      }
+      "justMyCode": true
     },
 
     {

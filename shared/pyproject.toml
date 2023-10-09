@@ -10,6 +10,15 @@ python = "^3.11"
 boto3 = "^1.28.56"
 
 
+[tool.poetry.group.dev.dependencies]
+pytest-mock = "^3.11.1"
+pytest = "^7.4.2"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

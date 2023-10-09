@@ -4,7 +4,10 @@ import logging
 from slack_sdk import WebClient
 
 from dinner_optimizer_shared import credentials_handler as creds
+from dinner_optimizer_shared import message_persistence as persistence
+from dinner_optimizer_shared import time_utils
 
+from dinner_optimizer_shared.interaction import Interaction
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -19,6 +22,21 @@ def lambda_handler(event, context):
     credentials = creds.fetch_creds_from_secrets_manager()
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+
+    past_recommendations: list[Interaction] = []
+    for n in reversed(range(2, 5)):
+        w = time_utils.nth_most_recent_saturday(n)
+        past_interactions = persistence.retrieve_interactions_for_week(w)
+
+        # Add them to the current week's history.
+        bot_messages = list(filter(lambda x: x.role == "assistant", past_interactions))
+        if len(bot_messages) < 1:
+            continue
+
+        past_recommendations.append(bot_messages[-1])
+
+    for pr in past_recommendations:
+        persistence.record_conversation_message(pr, time_utils.most_recent_saturday())
 
     slack_client.chat_postMessage(
         channel=CHANNEL_ID,

@@ -28,8 +28,10 @@ You can find more information and examples about filtering Lambda function logs 
 
 ## Tests
 
-Tests are defined in the `tests` folder in this project. Use PIP to install the test dependencies and run tests.
+Each Lambda has its own tests, defined in the "tests" subfolder of each function. To run them, use `poetry run pytest`.
 
+
+For SAM-level tests, do the following:
 ```bash
 dinner-optimizer$ pip install -r tests/requirements.txt --user
 # unit test

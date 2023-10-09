@@ -7,6 +7,8 @@ from dinner_optimizer_shared import credentials_handler as creds
 from dinner_optimizer_shared import message_persistence as db
 from dinner_optimizer_shared import time_utils
 
+from dinner_optimizer_shared.interaction import Interaction
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -41,12 +43,13 @@ def handle_user_message(payload):
         return api_gateway_response({})
 
     current_week = time_utils.most_recent_saturday()
-    entry = {
-        "role": {"S": "user"},
-        "time": {"S": f"{current_week} {time_utils.current_time()}"},
-        "text": {"S": user_response},
-        "timestamp": {"S": timestamp},
-    }
+
+    entry = Interaction(
+        role="user",
+        time=f"{current_week} {time_utils.current_time()}",
+        text=user_response,
+        timestamp=timestamp,
+    )
 
     credentials = creds.fetch_creds_from_secrets_manager()
 

@@ -9,5 +9,8 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}/shared/src/dinner_optimizer_shared"
   ],
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "python.testing.pytestArgs": ["shared"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }
