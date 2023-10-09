@@ -184,10 +184,11 @@ Resources:
             TableName: !Ref UserResponseTable
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
+        - LambdaInvokePolicy:
+            FunctionName: !Ref MenuSuggesterFunction
       Environment:
         Variables:
-          OPENAI_API_KEY: Defined in local environment
-          SLACK_BOT_TOKEN: Defined in local environment
+          MENU_SUGGESTER_LAMBDA_ARN: !GetAtt MenuSuggesterFunction.Arn
       Architectures:
         - x86_64
       Events:

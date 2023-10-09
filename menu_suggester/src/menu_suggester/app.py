@@ -38,6 +38,8 @@ def lambda_handler(event, context):
 
     current_week = time_utils.most_recent_saturday()
 
+    logger.info("Recommending for the week of %s", current_week)
+
     # Load priming instruction for LLM from priming_instruction.txt
     with open("priming_instruction.txt") as f:
         priming_instruction = f.read()

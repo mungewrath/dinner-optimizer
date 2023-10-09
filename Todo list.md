@@ -7,7 +7,7 @@
 	[X] Account for receiving requests and follow-up
 	[X] Need to have user_response_recorder respond to the hook, and post in channel
       [X] Prevent it from going into an infinite loop by checking user ID
-	  [ ] Tie API to SQS queue (which triggers Lambda) in order to consistently meet Slack's SLA
+	  [X] Tie API to SQS queue (which triggers Lambda) in order to consistently meet Slack's SLA
 	  [ ] Consider reaction to message, instead of posting an explicit message reply
 	  [X] No dupe handling currently, need to prevent multiple db messages / slack responses
 	[X] Test (stub) menu_suggester with chat history
@@ -17,7 +17,7 @@
 	[X] Call Dall-E, chaining off prompts
 	[ ] ~Send MMS to user~
 [ ] Follow up requests
-    [ ] If someone posts after the initial meal is generated, user_response_recorder should run; AND, a new meal should be scheduled in 5 min
+    [ ] If someone posts after the initial meal is generated, user_response_recorder should run; AND, a new meal should be scheduled in 5 min (currently lower priority since you can type "conjure" to trigger at any time)
 	  [ ] Look at turning this into a slack button
 [X] Shared code
 	[X] Docker approach: is there a way to make a docker image / layer?

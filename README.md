@@ -2,6 +2,12 @@
 
 Task log: See Todo list.md
 
+## Using the tool
+- The Dinner Optimizer will start a new thread every week, asking for customizations before it makes a meal plan.
+- After enough time has passed, it will roll up all the suggestions and - voila - make you a customized meal plan!
+- You may continue to send follow-up tweaks if you're not satisfied with the initial list, and Dinner Optimizer will note them down.
+- Type "conjure" at any time to generate a new meal list.
+
 ## Build notes
 - Currently using poetry for local dependency management
 - Format follows [src layout](https://informediq.com/python-src-layout-for-aws-lambdas/)

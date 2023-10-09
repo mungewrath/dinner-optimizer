@@ -18,7 +18,10 @@
       "request": "launch",
       "program": "${workspaceFolder}/user_response_recorder/src/user_response_recorder/app.py",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "env": {
+        "MENU_SUGGESTER_LAMBDA_ARN": "arn:aws:lambda:us-west-2:156988614292:function:dinner-optimizer-MenuSuggesterFunction-ytwIEFKhw0h0"
+      }
     },
 
     {

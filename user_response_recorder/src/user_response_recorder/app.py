@@ -1,4 +1,5 @@
 import json
+import boto3
 
 import logging
 from slack_sdk import WebClient
@@ -8,6 +9,7 @@ from dinner_optimizer_shared import message_persistence as db
 from dinner_optimizer_shared import time_utils
 
 from dinner_optimizer_shared.interaction import Interaction
+import os
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -41,6 +43,13 @@ def handle_user_message(payload):
     if sender == BOT_USER_ID:
         logger.info("Hearing myself; exiting without actions")
         return api_gateway_response({})
+
+    if "conjure" in user_response.lower():
+        logger.info("Invoking menu suggestion lambda")
+        client = boto3.client("lambda")
+        lambda_name = os.environ["MENU_SUGGESTER_LAMBDA_ARN"]
+        client.invoke(FunctionName=lambda_name, InvocationType="Event")
+        return
 
     current_week = time_utils.most_recent_saturday()
 
