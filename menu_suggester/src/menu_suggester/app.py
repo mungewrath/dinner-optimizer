@@ -48,27 +48,29 @@ def lambda_handler(event, context):
     with open("priming_instruction.txt") as f:
         priming_instruction = f.read()
 
-    interactions = persistence.retrieve_interactions_for_week(current_week)
-
     messages = [
         {"role": "system", "content": priming_instruction},
     ]
 
+    interactions = persistence.retrieve_interactions_for_week(current_week)
+
     for i in interactions:
         messages.append({"role": i.role, "content": i.text})
 
-    messages.append(
-        {
-            "role": "user",
-            "content": "I feel like an Indian dish with okra",
-        }
-    )
+    known_recipe_names = download_known_recipes()
 
-    messages.append(
-        {
-            "role": "user",
-            "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
-        }
+    messages.extend(
+        [
+            {"role": "system", "content": "\n".join(known_recipe_names)},
+            {
+                "role": "system",
+                "content": "Above are a set of recipes your family already knows how to cook. Balance between using some of their familiar recipes and introducing new ones.",
+            },
+            {
+                "role": "user",
+                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
+            },
+        ]
     )
 
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
@@ -89,49 +91,6 @@ def lambda_handler(event, context):
     )
 
     logger.info("OpenAI response: %s", json.dumps(response, indent=2))
-
-    menu = json.loads(response.choices[0].message.function_call.arguments)
-
-    # Download json file from s3://<bucket>/recipe_names.json
-    # and load into memory, then deserialize from json
-    s3 = boto3.resource("s3")
-    obj = s3.Object(PAPRIKA_RECIPES_BUCKET, "recipe_names.json")  # type: ignore
-    json_string = obj.get()["Body"].read().decode("utf-8")
-    recipe_names = json.loads(json_string)
-    # logger.info("recipe_names: %s", recipe_names)
-
-    for meal in menu["meal_list"]:
-        messages.append(
-            {
-                "role": "assistant",
-                "content": f"{meal['meal_name']} - {meal['meal_description']}",
-            }
-        )
-    messages.extend(
-        [
-            {"role": "system", "content": "\n".join(recipe_names)},
-            {
-                "role": "system",
-                "content": "Above are a set of recipes your family already knows how to cook. Compare them recipes with the recipes you suggested, and if any of them are fairly similar, substitute them with the known recipes. Otherwise, keep the original recipes.",
-            },
-        ]
-    )
-
-    response: Any = openai.ChatCompletion.create(
-        model=MODEL,
-        messages=messages,
-        max_tokens=1500,
-        temperature=0.7,
-        n=1,
-        stop=None,
-        functions=[
-            meal_function(
-                commentary_description="A detailed meal-by-meal description, explaining why an original recipe was substituted for a new one"
-            )
-        ],
-    )
-
-    logger.info("OpenAI response post-replacement: %s", json.dumps(response, indent=2))
 
     menu = json.loads(response.choices[0].message.function_call.arguments)
 
@@ -190,6 +149,16 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({"response": menu}),
     }
+
+
+def download_known_recipes():
+    s3 = boto3.resource("s3")
+    obj = s3.Object(PAPRIKA_RECIPES_BUCKET, "recipe_names.json")  # type: ignore
+    json_string = obj.get()["Body"].read().decode("utf-8")
+    recipe_names = json.loads(json_string)
+    logger.info("recipe_names: %s", recipe_names)
+
+    return recipe_names
 
 
 def post_meal_photo(slack_client, meal, any_meals_failed_to_upload):
