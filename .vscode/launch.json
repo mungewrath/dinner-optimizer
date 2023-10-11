@@ -5,6 +5,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Direct: Paprika Fetcher",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/paprika_fetcher/src/paprika_fetcher/app.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "BUCKET_NAME": "mungewrath-dinner-optimizer"
+      }
+    },
+
+    {
       "name": "Direct: Upcoming Reminder",
       "type": "python",
       "request": "launch",
@@ -19,6 +31,7 @@
       "program": "${workspaceFolder}/user_response_recorder/src/user_response_recorder/app.py",
       "console": "integratedTerminal",
       "justMyCode": true,
+      "cwd": "${workspaceFolder}/user_response_recorder", // Needed in order to access the sample event
       "env": {
         "MENU_SUGGESTER_LAMBDA_ARN": "arn:aws:lambda:us-west-2:156988614292:function:dinner-optimizer-MenuSuggesterFunction-ytwIEFKhw0h0"
       }
@@ -31,7 +44,10 @@
       "program": "${workspaceFolder}/menu_suggester/src/menu_suggester/app.py",
       "cwd": "${workspaceFolder}/menu_suggester/src/menu_suggester",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "env": {
+        "PAPRIKA_RECIPES_BUCKET": "mungewrath-dinner-optimizer"
+      }
     },
 
     {
