@@ -1,6 +1,8 @@
 import base64
 import json
+import os
 import time
+from typing import Any
 import openai
 import boto3
 
@@ -24,6 +26,8 @@ MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and 
 CHANNEL_ID = "C05JEBJHNQ4"
 
 MODEL = "gpt-3.5-turbo"
+
+PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
 dynamodb = boto3.client("dynamodb")
 
@@ -56,6 +60,13 @@ def lambda_handler(event, context):
     messages.append(
         {
             "role": "user",
+            "content": "I feel like an Indian dish with okra",
+        }
+    )
+
+    messages.append(
+        {
+            "role": "user",
             "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
         }
     )
@@ -63,47 +74,64 @@ def lambda_handler(event, context):
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
 
     # Send priming instruction to OpenAI API and get response
-    response = openai.ChatCompletion.create(
+    response: Any = openai.ChatCompletion.create(
         model=MODEL,
         messages=messages,
-        max_tokens=2000,
+        max_tokens=1500,
         temperature=0.5,
         n=1,
         stop=None,
         functions=[
-            {
-                "name": "generate_meal_plan",
-                "description": "Generate structured meal plan",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "meal_list": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "meal_name": {
-                                        "type": "string",
-                                        "description": "title of the meal",
-                                    },
-                                    "meal_description": {
-                                        "type": "string",
-                                        "description": "a description of the meal",
-                                    },
-                                },
-                            },
-                        },
-                        "commentary": {
-                            "type": "string",
-                            "description": "A detailed meal-by-meal description, explaining what factors led to the meal being chosen, and whether it takes the user's special requests into account",
-                        },
-                    },
-                },
-            }
+            meal_function(
+                commentary_description="A detailed meal-by-meal description, explaining what factors led to the meal being chosen, and whether it takes the user's special requests into account"
+            )
         ],
     )
 
     logger.info("OpenAI response: %s", json.dumps(response, indent=2))
+
+    menu = json.loads(response.choices[0].message.function_call.arguments)
+
+    # Download json file from s3://<bucket>/recipe_names.json
+    # and load into memory, then deserialize from json
+    s3 = boto3.resource("s3")
+    obj = s3.Object(PAPRIKA_RECIPES_BUCKET, "recipe_names.json")  # type: ignore
+    json_string = obj.get()["Body"].read().decode("utf-8")
+    recipe_names = json.loads(json_string)
+    # logger.info("recipe_names: %s", recipe_names)
+
+    for meal in menu["meal_list"]:
+        messages.append(
+            {
+                "role": "assistant",
+                "content": f"{meal['meal_name']} - {meal['meal_description']}",
+            }
+        )
+    messages.extend(
+        [
+            {"role": "system", "content": "\n".join(recipe_names)},
+            {
+                "role": "system",
+                "content": "Above are a set of recipes your family already knows how to cook. Compare them recipes with the recipes you suggested, and if any of them are fairly similar, substitute them with the known recipes. Otherwise, keep the original recipes.",
+            },
+        ]
+    )
+
+    response: Any = openai.ChatCompletion.create(
+        model=MODEL,
+        messages=messages,
+        max_tokens=1500,
+        temperature=0.7,
+        n=1,
+        stop=None,
+        functions=[
+            meal_function(
+                commentary_description="A detailed meal-by-meal description, explaining why an original recipe was substituted for a new one"
+            )
+        ],
+    )
+
+    logger.info("OpenAI response post-replacement: %s", json.dumps(response, indent=2))
 
     menu = json.loads(response.choices[0].message.function_call.arguments)
 
@@ -190,12 +218,45 @@ def post_meal_photo(slack_client, meal, any_meals_failed_to_upload):
 
 
 def dall_e_api_call(meal_description):
-    response = openai.Image.create(
+    response: Any = openai.Image.create(
         prompt=meal_description, n=1, size="512x512", response_format="b64_json"
     )
 
     raw_b64 = response["data"][0]["b64_json"]
     return base64.b64decode(raw_b64)
+
+
+def meal_function(commentary_description: str):
+    return {
+        "name": "generate_meal_plan",
+        "description": "Generate structured meal plan",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "meal_list": {
+                    "type": "array",
+                    "description": "List of at most 4 recipes tailored to the user's preferences",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "meal_name": {
+                                "type": "string",
+                                "description": "title of the meal",
+                            },
+                            "meal_description": {
+                                "type": "string",
+                                "description": "a description of the meal",
+                            },
+                        },
+                    },
+                },
+                "commentary": {
+                    "type": "string",
+                    "description": commentary_description,
+                },
+            },
+        },
+    }
 
 
 def cli():
