@@ -15,8 +15,6 @@ phases:
       # - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
       # - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
       # - aws configure set default.region $AWS_DEFAULT_REGION
-      - ls
-      - tree
       - pip install poetry
       - poetry export -C menu_suggester -f requirements.txt --output menu_suggester/src/menu_suggester/requirements.txt --without-hashes
       - poetry export -C paprika_fetcher -f requirements.txt --output paprika_fetcher/src/paprika_fetcher/requirements.txt --without-hashes
