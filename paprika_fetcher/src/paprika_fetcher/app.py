@@ -26,8 +26,6 @@ def lambda_handler(event, context):
     # TODO: hardcoded for now, but ideally this should be fetched from the Paprika app
     dinner_category_id = "959A2BAB-9A79-4465-ADCE-582D7D3E982D"
 
-    # Call the URL https://www.paprikaapp.com/api/v1/sync/recipes/ with Basic authentication
-    # to get the list of recipes
     paprika_response = requests.get(
         "https://www.paprikaapp.com/api/v1/sync/recipes/",
         auth=(paprika_username, paprika_password),
@@ -40,8 +38,6 @@ def lambda_handler(event, context):
 
     for r in recipes["result"]:
         recipe_id = r["uid"]
-        # Call https://www.paprikaapp.com/api/v1/sync/recipe/<recipe_id> with Basic authentication.
-        # Take the recipe name and add it to recipe_names.
         paprika_recipe_response = requests.get(
             f"https://www.paprikaapp.com/api/v1/sync/recipe/{recipe_id}",
             auth=(paprika_username, paprika_password),
@@ -53,7 +49,6 @@ def lambda_handler(event, context):
 
     bucket_name = os.environ["BUCKET_NAME"]
 
-    # Upload the list of recipe names to S3 as a JSON file
     s3_client = boto3.client("s3")
     s3_client.put_object(
         Bucket=bucket_name,

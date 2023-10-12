@@ -20,6 +20,7 @@ resolve_s3 = true
 s3_prefix = "dinner-optimizer"
 region = "us-west-2"
 image_repositories = []
+parameter_overrides = "StoredRecipesBucketName=\"mungewrath-dinner-optimizer\""
 
 [default.package.parameters]
 resolve_s3 = true
