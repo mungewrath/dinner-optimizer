@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "paprika-fetcher"
+version = "0.1.0"
+description = "Periodically fetches Paprika recipes for Dinner Optimizer to suggest, instead of purely random ones"
+authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+dinner-optimizer-shared = {path = "../shared", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

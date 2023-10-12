@@ -5,6 +5,11 @@ Description: >
 
   Sample SAM Template for dinner-optimizer
 
+Parameters:
+  StoredRecipesBucketName:
+    Type: String
+    Description: Bucket where recipes from Paprika are stored
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -12,26 +17,6 @@ Globals:
     MemorySize: 128
 
 Resources:
-  DinnerOptimizerFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaSecretsManagerAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - secretsmanager:GetSecretValue
-                Resource: "*"
-
   MenuSuggesterFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -39,10 +24,39 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.11
       Timeout: 90
-      # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UserResponseTable
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: "*"
+        - S3ReadPolicy:
+            BucketName: !Ref StoredRecipesBucketName
+      Environment:
+        Variables:
+          PAPRIKA_RECIPES_BUCKET: !Ref StoredRecipesBucketName
+      Architectures:
+        - x86_64
+      Tags:
+        Project: DinnerOptimizer
+      Events:
+        ComplexScheduleEvent:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 21 ? * SAT *)
+            ScheduleExpressionTimezone: UTC
+            # RetryPolicy:
+            #   MaximumRetryAttempts: 5
+            #   MaximumEventAgeInSeconds: 300
+            # DeadLetterConfig:
+            #   Type: SQS
+
+  UpcomingReminderFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: upcoming_reminder/src/upcoming_reminder/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
       Environment:
@@ -54,19 +68,57 @@ Resources:
       Tags:
         Project: DinnerOptimizer
       Events:
-        ComplexScheduleEvent:
+        MorningTrigger:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: rate(5 minutes)
+            ScheduleExpression: cron(0 16 ? * SAT *)
             ScheduleExpressionTimezone: UTC
-            # RetryPolicy:
-            #   MaximumRetryAttempts: 5
-            #   MaximumEventAgeInSeconds: 300
-            # DeadLetterConfig:
-            #   Type: SQS
+
+  UserResponseRecorderFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: user_response_recorder/src/user_response_recorder/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserResponseTable
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: "*"
+        - LambdaInvokePolicy:
+            FunctionName: !Ref MenuSuggesterFunction
+      Environment:
+        Variables:
+          MENU_SUGGESTER_LAMBDA_ARN: !GetAtt MenuSuggesterFunction.Arn
+      Architectures:
+        - x86_64
+      Events:
+        SQSEventMessage:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt UserResponseQueue.Arn
+            BatchSize: 1
+      Tags:
+        Project: DinnerOptimizer
 
   UserResponseQueue:
     Type: AWS::SQS::Queue
+
+  UserResponseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserResponseTable
+      AttributeDefinitions:
+        - AttributeName: Week
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Week
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      # Ignored due to on-demand billing mode
+      ProvisionedThroughput:
+        ReadCapacityUnits: 0
+        WriteCapacityUnits: 0
 
   DispatcherSQSAPIRole:
     Type: AWS::IAM::Role
@@ -138,20 +190,20 @@ Resources:
             SlackEvent:
               type: object
 
-  UpcomingReminderFunction:
+  PaprikaFetcherFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: upcoming_reminder/src/upcoming_reminder/
+      CodeUri: paprika_fetcher/src/paprika_fetcher/
       Handler: app.lambda_handler
       Runtime: python3.11
-      # Role: !GetAtt DinnerOptimizerFunctionRole.Arn
       Policies:
+        - S3WritePolicy:
+            BucketName: !Ref StoredRecipesBucketName
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
       Environment:
         Variables:
-          OPENAI_API_KEY: Defined in local environment
-          SLACK_BOT_TOKEN: Defined in local environment
+          BUCKET_NAME: !Ref StoredRecipesBucketName
       Architectures:
         - x86_64
       Tags:
@@ -160,61 +212,8 @@ Resources:
         MorningTrigger:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(0 16 ? * SAT *)
+            ScheduleExpression: cron(0 13 ? * SAT *)
             ScheduleExpressionTimezone: UTC
-
-  UpcomingReminderTrigger:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: UpcomingReminderTrigger
-      ScheduleExpression: cron(0 16 ? * SAT *) # Every Saturday at 4 PM UTC
-      State: ENABLED
-      Targets:
-        - Arn: !GetAtt UpcomingReminderFunction.Arn
-          Id: UpcomingReminderTarget
-
-  UserResponseRecorderFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      CodeUri: user_response_recorder/src/user_response_recorder/
-      Handler: app.lambda_handler
-      Runtime: python3.11
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UserResponseTable
-        - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: "*"
-        - LambdaInvokePolicy:
-            FunctionName: !Ref MenuSuggesterFunction
-      Environment:
-        Variables:
-          MENU_SUGGESTER_LAMBDA_ARN: !GetAtt MenuSuggesterFunction.Arn
-      Architectures:
-        - x86_64
-      Events:
-        SQSEventMessage:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt UserResponseQueue.Arn
-            BatchSize: 1
-      Tags:
-        Project: DinnerOptimizer
-
-  UserResponseTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: UserResponseTable
-      AttributeDefinitions:
-        - AttributeName: Week
-          AttributeType: S
-      KeySchema:
-        - AttributeName: Week
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-      # Ignored due to on-demand billing mode
-      ProvisionedThroughput:
-        ReadCapacityUnits: 0
-        WriteCapacityUnits: 0
 # Outputs:
 # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
 # Find out more about other implicit resources you can reference within SAM

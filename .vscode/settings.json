@@ -12,5 +12,6 @@
   "editor.formatOnSave": true,
   "python.testing.pytestArgs": ["shared"],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true
+  "python.testing.pytestEnabled": true,
+  "python.analysis.typeCheckingMode": "basic"
 }
