@@ -59,6 +59,8 @@ Resources:
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserResponseTable
       Environment:
         Variables:
           OPENAI_API_KEY: Defined in local environment
