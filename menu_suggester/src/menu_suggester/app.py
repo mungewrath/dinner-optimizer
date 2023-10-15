@@ -54,8 +54,25 @@ def lambda_handler(event, context):
 
     interactions = persistence.retrieve_interactions_for_week(current_week)
 
-    for i in interactions:
-        messages.append({"role": i.role, "content": i.text})
+    past_suggestions = list(filter(lambda x: x.role == "assistant", interactions))
+    messages.append(
+        {
+            "role": "system",
+            "content": "These are the meal plans suggested for the past few weeks.",
+        }
+    )
+    for ps in past_suggestions:
+        messages.append({"role": ps.role, "content": ps.text})
+
+    messages.append(
+        {
+            "role": "system",
+            "content": "These are the users' specific requests for this week.",
+        }
+    )
+    user_requests = list(filter(lambda x: x.role == "user", interactions))
+    for request in user_requests:
+        messages.append({"role": request.role, "content": request.text})
 
     known_recipe_names = download_known_recipes()
 
@@ -68,7 +85,7 @@ def lambda_handler(event, context):
             },
             {
                 "role": "user",
-                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
+                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
             },
         ]
     )
@@ -80,12 +97,13 @@ def lambda_handler(event, context):
         model=MODEL,
         messages=messages,
         max_tokens=1500,
-        temperature=0.5,
+        temperature=0.7,
         n=1,
         stop=None,
         functions=[
             meal_function(
-                commentary_description="A detailed meal-by-meal description, explaining what factors led to the meal being chosen, and whether it takes the user's special requests into account"
+                commentary_description="A detailed meal-by-meal description, explaining what factors \
+                    led to the meal being chosen, and whether it takes the user's special requests into account"
             )
         ],
     )
