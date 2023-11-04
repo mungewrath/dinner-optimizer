@@ -17,7 +17,10 @@ logger.setLevel(logging.INFO)
 consoleHandler = logging.StreamHandler()
 logger.addHandler(consoleHandler)
 
-CHANNEL_ID = "C05JEBJHNQ4"
+# For #dinner-optimizer
+# CHANNEL_ID = "C05JEBJHNQ4"
+# #dinner-optimizer-beta
+# CHANNEL_ID = "C060L3A1J4W"
 BOT_USER_ID = "U05L9285S6A"
 
 
@@ -39,6 +42,7 @@ def handle_user_message(payload):
     timestamp = payload["ts"]
     user_response = payload["text"]
     sender = payload["user"]
+    slack_channel_id = payload["channel"]
 
     if sender == BOT_USER_ID:
         logger.info("Hearing myself; exiting without actions")
@@ -48,7 +52,10 @@ def handle_user_message(payload):
         logger.info("Invoking menu suggestion lambda")
         client = boto3.client("lambda")
         lambda_name = os.environ["MENU_SUGGESTER_LAMBDA_ARN"]
-        client.invoke(FunctionName=lambda_name, InvocationType="Event")
+        event = {"slack_channel_id": slack_channel_id}
+        client.invoke(
+            FunctionName=lambda_name, InvocationType="Event", Payload=json.dumps(event)
+        )
         return
 
     current_week = time_utils.most_recent_saturday()
@@ -69,7 +76,7 @@ def handle_user_message(payload):
     logger.info("Message recorded.")
 
     slack_client.chat_postMessage(
-        channel=CHANNEL_ID,
+        channel=slack_channel_id,
         text=f">{user_response}\nGot it :thumbsup:",
     )
 
