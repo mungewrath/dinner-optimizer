@@ -26,7 +26,7 @@ def lambda_handler(event, context):
     past_recommendations: list[Interaction] = []
     for n in reversed(range(2, 5)):
         w = time_utils.nth_most_recent_saturday(n)
-        past_interactions = persistence.retrieve_interactions_for_week(w)
+        past_interactions = persistence.retrieve_interactions_for_week(w, channel_id)
 
         # Add them to the current week's history.
         bot_messages = list(filter(lambda x: x.role == "assistant", past_interactions))
@@ -36,7 +36,9 @@ def lambda_handler(event, context):
         past_recommendations.append(bot_messages[-1])
 
     for pr in past_recommendations:
-        persistence.record_conversation_message(pr, time_utils.most_recent_saturday())
+        persistence.record_conversation_message(
+            pr, time_utils.most_recent_saturday(), channel_id
+        )
 
     slack_client.chat_postMessage(
         channel=channel_id,

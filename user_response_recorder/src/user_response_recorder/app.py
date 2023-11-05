@@ -71,7 +71,7 @@ def handle_user_message(payload):
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
 
-    db.record_conversation_message(entry, current_week)
+    db.record_conversation_message(entry, current_week, slack_channel_id)
 
     logger.info("Message recorded.")
 

@@ -11,14 +11,23 @@
 	  [ ] Consider reaction to message, instead of posting an explicit message reply
 	  [X] No dupe handling currently, need to prevent multiple db messages / slack responses
 	[X] Test (stub) menu_suggester with chat history
+[ ] Scheduling/usability
+	[ ] Change "start of week" to be Friday instead of Saturday
+		[ ] Migrate Dynamo rows
+		[ ] Change ScheduleV2 to fire on Friday (different time?)
+		[ ] Update shared util tests
+[ ] CodeBuild pipeline
+	[ ] Figure out how to integrate with all/multiple branches
+	[ ] Run tests
+	[ ] Pre-built image so it doesn't need to install python stuff
 [ ] Message spam reduction
-	[ ] Allow messaging to different channels rather than a single hard-coded
+	[X] Allow messaging to different channels rather than a single hard-coded
 		[X] User response recorder
 		[X] Menu suggester
 		[X] Upcoming reminder
 			[X] Modify cron schedule so it includes event details
-		[ ] Migrate to use a hash key of date + channel
-		[ ] Regression test
+		[X] Migrate to use a hash key of date + channel
+		[X] Regression test
 	[ ] Post multiple pictures at once, not individually
 	[ ] Try to reduce recap/preamble into one message
 [ ] Recommendation history

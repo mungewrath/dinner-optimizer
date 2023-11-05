@@ -29,8 +29,6 @@ MODEL = "gpt-3.5-turbo"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
-dynamodb = boto3.client("dynamodb")
-
 
 def lambda_handler(event, context):
     slack_channel_id = event["slack_channel_id"]
@@ -54,7 +52,9 @@ def lambda_handler(event, context):
         {"role": "system", "content": priming_instruction},
     ]
 
-    interactions = persistence.retrieve_interactions_for_week(current_week)
+    interactions = persistence.retrieve_interactions_for_week(
+        current_week, slack_channel_id
+    )
 
     past_suggestions = list(filter(lambda x: x.role == "assistant", interactions))
     messages.append(
@@ -131,10 +131,7 @@ def lambda_handler(event, context):
         text=recorded_message,
         timestamp=f"{time.time()}",
     )
-    persistence.record_conversation_message(
-        interaction,
-        current_week,
-    )
+    persistence.record_conversation_message(interaction, current_week, slack_channel_id)
 
     any_meals_failed_to_upload = False
 
