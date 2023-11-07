@@ -116,11 +116,6 @@ def lambda_handler(event, context):
 
     recorded_message = "Here's your suggested menu for this week:"
 
-    slack_client.chat_postMessage(
-        channel=slack_channel_id,
-        text=recorded_message + "\n" + menu["commentary"],
-    )
-
     recorded_message += "\n"
     for meal in menu["meal_list"]:
         recorded_message += f"{meal['meal_name']} - {meal['meal_description']}\n"
@@ -135,10 +130,32 @@ def lambda_handler(event, context):
 
     any_meals_failed_to_upload = False
 
+    meal_data = []
     for meal in menu["meal_list"]:
-        any_meals_failed_to_upload = post_meal_photo(
-            slack_client, slack_channel_id, meal, any_meals_failed_to_upload
-        )
+        try:
+            meal_data.append(
+                post_meal_photo(
+                    slack_client, slack_channel_id, meal, any_meals_failed_to_upload
+                )
+            )
+        except:
+            logger.error(
+                "Error uploading file for %s: %s",
+                meal["meal_name"],
+                meal["meal_description"],
+                exc_info=True,
+            )
+            any_meals_failed_to_upload = True
+
+    slack_msg_v2_with_files(
+        message="\n".join(
+            f"• *{m['meal_name']}*: {m['meal_description']}\n"
+            for m in menu["meal_list"]
+        ),
+        file_uploads_data=meal_data,
+        slack_client=slack_client,
+        channel=slack_channel_id,
+    )
 
     if any_meals_failed_to_upload:
         msg = "I had some trouble uploading some of the pictures. Here's a text-only copy of the full menu:\n"
@@ -153,13 +170,9 @@ def lambda_handler(event, context):
 
     slack_client.chat_postMessage(
         channel=slack_channel_id,
-        text=menu["commentary"],
-    )
-
-    slack_client.chat_postMessage(
-        channel=slack_channel_id,
-        # text="Post in the channel if you'd like to request any tweaks!",
-        text="Let me know if there are any customizations you want after looking, and I can re-think the list.",
+        text=menu["commentary"]
+        + "\n\n"
+        + "Let me know if there are any customizations you want after looking, and I can re-think the list.",
     )
 
     return {
@@ -179,28 +192,41 @@ def download_known_recipes():
 
 
 def post_meal_photo(slack_client, slack_channel_id, meal, any_meals_failed_to_upload):
-    try:
-        meal_image = dall_e_api_call(
-            f"{meal['meal_name']} - {meal['meal_description']}"
-        )
+    meal_image = dall_e_api_call(f"{meal['meal_name']} - {meal['meal_description']}")
 
-        result = slack_client.files_upload(
-            channels=slack_channel_id,
-            initial_comment=f"• *{meal['meal_name']}*: {meal['meal_description']}",
-            content=meal_image,
-            filename=f"{meal['meal_name']}.png",
-        )
-        logger.info(result)
-    except:
-        logger.error(
-            "Error uploading file for %s: %s",
-            meal["meal_name"],
-            meal["meal_description"],
-            exc_info=True,
-        )
-        any_meals_failed_to_upload = True
+    return {
+        "content": meal_image,
+        "title": meal["meal_name"],
+    }
 
-    return any_meals_failed_to_upload
+
+def slack_msg_v2_with_files(message, file_uploads_data, slack_client, channel):
+    upload = slack_client.files_upload_v2(
+        file_uploads=file_uploads_data,
+        channel=channel,
+        initial_comment=message,
+    )
+
+
+def post_with_markdown(image_files, slack_client, slack_channel_id):
+    # Upload images to Slack and collect file IDs
+    files = []
+    message = "Hullo!"
+    for file in image_files:
+        response = slack_client.files_upload(
+            # channels=slack_channel_id,
+            file=file,
+        )
+        files.append(
+            {
+                "id": response["file"]["id"],
+                "url": response["file"]["permalink_public"],
+            }
+        )
+        logger.info(response)
+        message = message + "<" + response["file"]["permalink"] + "| >"
+
+    out_p = slack_client.chat_postMessage(channel=slack_channel_id, text=message)
 
 
 def dall_e_api_call(meal_description):
