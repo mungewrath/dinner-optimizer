@@ -23,16 +23,16 @@ TABLE_NAME = "UserResponseTable"
 
 MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and Sauerkraut",\n      "meal_description": "Grilled sausages served with sauerkraut and mustard"\n    },\n    {\n      "meal_name": "Vegetable Stir-Fry",\n      "meal_description": "Assorted vegetables stir-fried with soy sauce and garlic"\n    },\n    {\n      "meal_name": "Korean Bibimbap",\n      "meal_description": "Mixed rice bowl topped with sautéed vegetables, tofu, and a fried egg"\n    },\n    {\n      "meal_name": "Spaghetti Carbonara",\n      "meal_description": "Pasta tossed in a creamy sauce with eggs, cheese, and bacon"\n    }\n  ]\n}'
 
-CHANNEL_ID = "C05JEBJHNQ4"
+# CHANNEL_ID = "C05JEBJHNQ4"
 
 MODEL = "gpt-3.5-turbo"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
-dynamodb = boto3.client("dynamodb")
-
 
 def lambda_handler(event, context):
+    slack_channel_id = event["slack_channel_id"]
+
     credentials = creds.fetch_creds_from_secrets_manager()
 
     # Set your OpenAI API key
@@ -52,10 +52,29 @@ def lambda_handler(event, context):
         {"role": "system", "content": priming_instruction},
     ]
 
-    interactions = persistence.retrieve_interactions_for_week(current_week)
+    interactions = persistence.retrieve_interactions_for_week(
+        current_week, slack_channel_id
+    )
 
-    for i in interactions:
-        messages.append({"role": i.role, "content": i.text})
+    past_suggestions = list(filter(lambda x: x.role == "assistant", interactions))
+    messages.append(
+        {
+            "role": "system",
+            "content": "These are the meal plans suggested for the past few weeks.",
+        }
+    )
+    for ps in past_suggestions:
+        messages.append({"role": ps.role, "content": ps.text})
+
+    messages.append(
+        {
+            "role": "system",
+            "content": "These are the users' specific requests for this week.",
+        }
+    )
+    user_requests = list(filter(lambda x: x.role == "user", interactions))
+    for request in user_requests:
+        messages.append({"role": request.role, "content": request.text})
 
     known_recipe_names = download_known_recipes()
 
@@ -68,7 +87,7 @@ def lambda_handler(event, context):
             },
             {
                 "role": "user",
-                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account",
+                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
             },
         ]
     )
@@ -80,12 +99,13 @@ def lambda_handler(event, context):
         model=MODEL,
         messages=messages,
         max_tokens=1500,
-        temperature=0.5,
+        temperature=0.7,
         n=1,
         stop=None,
         functions=[
             meal_function(
-                commentary_description="A detailed meal-by-meal description, explaining what factors led to the meal being chosen, and whether it takes the user's special requests into account"
+                commentary_description="A detailed meal-by-meal description, explaining what factors \
+                    led to the meal being chosen, and whether it takes the user's special requests into account"
             )
         ],
     )
@@ -97,7 +117,7 @@ def lambda_handler(event, context):
     recorded_message = "Here's your suggested menu for this week:"
 
     slack_client.chat_postMessage(
-        channel=CHANNEL_ID,
+        channel=slack_channel_id,
         text=recorded_message + "\n" + menu["commentary"],
     )
 
@@ -111,16 +131,13 @@ def lambda_handler(event, context):
         text=recorded_message,
         timestamp=f"{time.time()}",
     )
-    persistence.record_conversation_message(
-        interaction,
-        current_week,
-    )
+    persistence.record_conversation_message(interaction, current_week, slack_channel_id)
 
     any_meals_failed_to_upload = False
 
     for meal in menu["meal_list"]:
         any_meals_failed_to_upload = post_meal_photo(
-            slack_client, meal, any_meals_failed_to_upload
+            slack_client, slack_channel_id, meal, any_meals_failed_to_upload
         )
 
     if any_meals_failed_to_upload:
@@ -130,17 +147,17 @@ def lambda_handler(event, context):
             for meal in menu["meal_list"]
         )
         slack_client.chat_postMessage(
-            channel=CHANNEL_ID,
+            channel=slack_channel_id,
             text=msg,
         )
 
     slack_client.chat_postMessage(
-        channel=CHANNEL_ID,
+        channel=slack_channel_id,
         text=menu["commentary"],
     )
 
     slack_client.chat_postMessage(
-        channel=CHANNEL_ID,
+        channel=slack_channel_id,
         # text="Post in the channel if you'd like to request any tweaks!",
         text="Let me know if there are any customizations you want after looking, and I can re-think the list.",
     )
@@ -161,14 +178,14 @@ def download_known_recipes():
     return recipe_names
 
 
-def post_meal_photo(slack_client, meal, any_meals_failed_to_upload):
+def post_meal_photo(slack_client, slack_channel_id, meal, any_meals_failed_to_upload):
     try:
         meal_image = dall_e_api_call(
             f"{meal['meal_name']} - {meal['meal_description']}"
         )
 
         result = slack_client.files_upload(
-            channels=CHANNEL_ID,
+            channels=slack_channel_id,
             initial_comment=f"• *{meal['meal_name']}*: {meal['meal_description']}",
             content=meal_image,
             filename=f"{meal['meal_name']}.png",
@@ -229,7 +246,8 @@ def meal_function(commentary_description: str):
 
 
 def cli():
-    lambda_handler(None, None)
+    event = {"slack_channel_id": "C060L3A1J4W"}
+    lambda_handler(event, None)
 
 
 if __name__ == "__main__":

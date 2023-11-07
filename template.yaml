@@ -59,6 +59,8 @@ Resources:
       Policies:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: "*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserResponseTable
       Environment:
         Variables:
           OPENAI_API_KEY: Defined in local environment
@@ -73,6 +75,7 @@ Resources:
           Properties:
             ScheduleExpression: cron(0 16 ? * SAT *)
             ScheduleExpressionTimezone: UTC
+            Input: '{ "slack-channel-id": "C05JEBJHNQ4" }'
 
   UserResponseRecorderFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction

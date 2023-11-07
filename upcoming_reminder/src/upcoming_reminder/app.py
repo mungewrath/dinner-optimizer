@@ -15,10 +15,10 @@ logger.setLevel(logging.INFO)
 consoleHandler = logging.StreamHandler()
 logger.addHandler(consoleHandler)
 
-CHANNEL_ID = "C05JEBJHNQ4"
-
 
 def lambda_handler(event, context):
+    channel_id = event["slack_channel_id"]
+
     credentials = creds.fetch_creds_from_secrets_manager()
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
@@ -26,7 +26,7 @@ def lambda_handler(event, context):
     past_recommendations: list[Interaction] = []
     for n in reversed(range(2, 5)):
         w = time_utils.nth_most_recent_saturday(n)
-        past_interactions = persistence.retrieve_interactions_for_week(w)
+        past_interactions = persistence.retrieve_interactions_for_week(w, channel_id)
 
         # Add them to the current week's history.
         bot_messages = list(filter(lambda x: x.role == "assistant", past_interactions))
@@ -36,10 +36,12 @@ def lambda_handler(event, context):
         past_recommendations.append(bot_messages[-1])
 
     for pr in past_recommendations:
-        persistence.record_conversation_message(pr, time_utils.most_recent_saturday())
+        persistence.record_conversation_message(
+            pr, time_utils.most_recent_saturday(), channel_id
+        )
 
     slack_client.chat_postMessage(
-        channel=CHANNEL_ID,
+        channel=channel_id,
         text="*It's time to meal plan soon!*\n\nPost before 2pm with any special requests you might have this week, and I'll include them.",
     )
 
@@ -50,7 +52,11 @@ def lambda_handler(event, context):
 
 
 def cli():
-    lambda_handler(None, None)
+    event = {
+        # Beta
+        "slack_channel_id": "C060L3A1J4W"
+    }
+    lambda_handler(event, None)
 
 
 if __name__ == "__main__":
