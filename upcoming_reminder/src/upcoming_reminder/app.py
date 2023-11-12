@@ -17,6 +17,8 @@ logger.addHandler(consoleHandler)
 
 
 def lambda_handler(event, context):
+    logger.info(json.dumps(event))
+
     channel_id = event["slack_channel_id"]
 
     credentials = creds.fetch_creds_from_secrets_manager()
