@@ -1,9 +1,11 @@
 import base64
 import json
 import os
+import sys
 import time
 from typing import Any
-import openai
+from openai import OpenAI
+
 import boto3
 
 import logging
@@ -35,8 +37,7 @@ def lambda_handler(event, context):
 
     credentials = creds.fetch_creds_from_secrets_manager()
 
-    # Set your OpenAI API key
-    openai.api_key = credentials["OPENAI_API_KEY"]
+    openai_client = OpenAI(api_key=credentials["OPENAI_API_KEY"])
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
 
@@ -95,9 +96,9 @@ def lambda_handler(event, context):
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
 
     # Send priming instruction to OpenAI API and get response
-    response: Any = openai.ChatCompletion.create(
+    response = openai_client.chat.completions.create(
         model=MODEL,
-        messages=messages,
+        messages=messages,  # type: ignore
         max_tokens=1500,
         temperature=0.7,
         n=1,
@@ -105,14 +106,19 @@ def lambda_handler(event, context):
         functions=[
             meal_function(
                 commentary_description="A detailed meal-by-meal description, explaining what factors \
-                    led to the meal being chosen, and whether it takes the user's special requests into account"
-            )
+                led to the meal being chosen, and whether it takes the user's special requests into account"
+            )  # type: ignore
         ],
     )
 
-    logger.info("OpenAI response: %s", json.dumps(response, indent=2))
+    logger.info("OpenAI response: %s", response)
 
-    menu = json.loads(response.choices[0].message.function_call.arguments)
+    function_response = response.choices[0].message.tool_calls
+    if function_response is None:
+        logger.fatal("Function response was empty")
+        sys.exit(1)
+
+    menu = json.loads(function_response[0].function.arguments)
 
     recorded_message = "Here's your suggested menu for this week:"
 
@@ -135,8 +141,12 @@ def lambda_handler(event, context):
     for meal in menu["meal_list"]:
         try:
             meal_data.append(
-                post_meal_photo(
-                    slack_client, slack_channel_id, meal, any_meals_failed_to_upload
+                generate_meal_photo(
+                    openai_client,
+                    slack_client,
+                    slack_channel_id,
+                    meal,
+                    any_meals_failed_to_upload,
                 )
             )
         except:
@@ -192,8 +202,12 @@ def download_known_recipes():
     return recipe_names
 
 
-def post_meal_photo(slack_client, slack_channel_id, meal, any_meals_failed_to_upload):
-    meal_image = dall_e_api_call(f"{meal['meal_name']} - {meal['meal_description']}")
+def generate_meal_photo(
+    openai_client, slack_client, slack_channel_id, meal, any_meals_failed_to_upload
+):
+    meal_image = dall_e_api_call(
+        openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+    )
 
     return {
         "content": meal_image,
@@ -230,13 +244,17 @@ def post_with_markdown(image_files, slack_client, slack_channel_id):
     out_p = slack_client.chat_postMessage(channel=slack_channel_id, text=message)
 
 
-def dall_e_api_call(meal_description):
-    response: Any = openai.Image.create(
-        prompt=meal_description, n=1, size="512x512", response_format="b64_json"
+def dall_e_api_call(openai_client: OpenAI, meal_description):
+    response = openai_client.images.generate(
+        model="dall-e-3",
+        prompt=meal_description,
+        n=1,
+        size="1024x1024",
+        response_format="b64_json",
     )
 
-    raw_b64 = response["data"][0]["b64_json"]
-    return base64.b64decode(raw_b64)
+    raw_b64 = response.data[0].b64_json
+    return base64.b64decode(raw_b64)  # type: ignore
 
 
 def meal_function(commentary_description: str):
