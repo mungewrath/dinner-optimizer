@@ -130,6 +130,7 @@ def lambda_handler(event, context):
 
     any_meals_failed_to_upload = False
 
+    # TODO: The DALLE calls can be parallelized
     meal_data = []
     for meal in menu["meal_list"]:
         try:
