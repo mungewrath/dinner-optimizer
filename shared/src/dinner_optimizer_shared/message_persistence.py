@@ -11,9 +11,6 @@ TABLE_NAME = "UserResponseTable"
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-consoleHandler = logging.StreamHandler()
-logger.addHandler(consoleHandler)
-
 
 def record_conversation_message(entry: Interaction, week: str, channel_id: str):
     # Retrieve the existing item based on the key

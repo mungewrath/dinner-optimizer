@@ -14,6 +14,7 @@ class Interaction:
 
         return ret
 
+    # TODO: Consider separating time into day / channel
     def __init__(self, role: str, time: str, text: str, timestamp: str) -> None:
         self.role = role
         self.time = time
