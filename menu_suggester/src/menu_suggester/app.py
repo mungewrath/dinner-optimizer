@@ -33,14 +33,39 @@ PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
 
 def lambda_handler(event, context):
-    slack_channel_id = event["slack_channel_id"]
+    slack_client = None
+    slack_channel_id = None
 
-    credentials = creds.fetch_creds_from_secrets_manager()
+    try:
+        slack_channel_id = event["slack_channel_id"]
 
-    openai_client = OpenAI(api_key=credentials["OPENAI_API_KEY"])
+        credentials = creds.fetch_creds_from_secrets_manager()
 
-    slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+        openai_client = OpenAI(api_key=credentials["OPENAI_API_KEY"])
 
+        slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+
+        return handle(slack_channel_id, openai_client, slack_client)
+    except:
+        logger.error("Uncaught error occurred during handling", exc_info=True)
+
+        if slack_client is not None and slack_channel_id is not None:
+            slack_client.chat_postMessage(
+                channel=slack_channel_id,
+                text="I had trouble generating a menu :fearful: Sorry about that! I might need a little TLC.",
+            )
+    finally:
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"response": None}),
+        }
+
+
+def handle(
+    slack_channel_id: str,
+    openai_client: OpenAI,
+    slack_client: WebClient,
+):
     current_week = time_utils.most_recent_saturday()
 
     logger.info("Recommending for the week of %s", current_week)
@@ -117,7 +142,7 @@ def lambda_handler(event, context):
     if function_response is not None:
         menu = json.loads(function_response[0].function.arguments)
     else:
-        logger.warn(
+        logger.warning(
             "Function response under tool_calls was empty. Falling back to function_call"
         )
 
@@ -126,11 +151,7 @@ def lambda_handler(event, context):
             menu = json.loads(function_response.arguments)
         else:
             logger.fatal("Function response under function_call was empty. Exiting.")
-            slack_client.chat_postMessage(
-                channel=slack_channel_id,
-                text="I had trouble generating a menu :fearful: Sorry about that! I might need a little TLC.",
-            )
-            sys.exit(1)
+            raise Exception("Unable to retrieve function call body")
 
     recorded_message = "Here's your suggested menu for this week:"
 
