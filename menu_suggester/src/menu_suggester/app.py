@@ -100,7 +100,7 @@ def lambda_handler(event, context):
         model=MODEL,
         messages=messages,  # type: ignore
         max_tokens=1500,
-        temperature=0.7,
+        temperature=1,
         n=1,
         stop=None,
         functions=[
@@ -114,11 +114,23 @@ def lambda_handler(event, context):
     logger.info("OpenAI response: %s", response)
 
     function_response = response.choices[0].message.tool_calls
-    if function_response is None:
-        logger.fatal("Function response was empty")
-        sys.exit(1)
+    if function_response is not None:
+        menu = json.loads(function_response[0].function.arguments)
+    else:
+        logger.warn(
+            "Function response under tool_calls was empty. Falling back to function_call"
+        )
 
-    menu = json.loads(function_response[0].function.arguments)
+        function_response = response.choices[0].message.function_call
+        if function_response is not None:
+            menu = json.loads(function_response.arguments)
+        else:
+            logger.fatal("Function response under function_call was empty. Exiting.")
+            slack_client.chat_postMessage(
+                channel=slack_channel_id,
+                text="I had trouble generating a menu :fearful: Sorry about that! I might need a little TLC.",
+            )
+            sys.exit(1)
 
     recorded_message = "Here's your suggested menu for this week:"
 
@@ -143,10 +155,7 @@ def lambda_handler(event, context):
             meal_data.append(
                 generate_meal_photo(
                     openai_client,
-                    slack_client,
-                    slack_channel_id,
                     meal,
-                    any_meals_failed_to_upload,
                 )
             )
         except:
@@ -158,12 +167,12 @@ def lambda_handler(event, context):
             )
             any_meals_failed_to_upload = True
 
-    slack_msg_v2_with_files(
-        message="\n".join(
+    upload = slack_client.files_upload_v2(
+        initial_comment="\n".join(
             f"• *{m['meal_name']}*: {m['meal_description']}\n"
             for m in menu["meal_list"]
         ),
-        file_uploads_data=meal_data,
+        file_uploads=meal_data,
         slack_client=slack_client,
         channel=slack_channel_id,
     )
@@ -202,9 +211,7 @@ def download_known_recipes():
     return recipe_names
 
 
-def generate_meal_photo(
-    openai_client, slack_client, slack_channel_id, meal, any_meals_failed_to_upload
-):
+def generate_meal_photo(openai_client, meal):
     meal_image = dall_e_api_call(
         openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
     )
@@ -213,14 +220,6 @@ def generate_meal_photo(
         "content": meal_image,
         "title": meal["meal_name"],
     }
-
-
-def slack_msg_v2_with_files(message, file_uploads_data, slack_client, channel):
-    upload = slack_client.files_upload_v2(
-        file_uploads=file_uploads_data,
-        channel=channel,
-        initial_comment=message,
-    )
 
 
 def post_with_markdown(image_files, slack_client, slack_channel_id):
