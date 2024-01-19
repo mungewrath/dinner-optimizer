@@ -102,20 +102,25 @@ def handle(
     for request in user_requests:
         messages.append({"role": request.role, "content": request.text})
 
-    known_recipe_names = download_known_recipes()
+    if os.environ.get("INCLUDE_PAPRIKA_RECIPES") == "True":
+        known_recipe_names = download_known_recipes()
 
-    messages.extend(
-        [
-            {"role": "system", "content": "\n".join(known_recipe_names)},
-            {
-                "role": "system",
-                "content": "Above are a set of recipes your family already knows how to cook. Balance between using some of their familiar recipes and introducing new ones.",
-            },
-            {
-                "role": "user",
-                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
-            },
-        ]
+        messages.extend(
+            [
+                {"role": "system", "content": "\n".join(known_recipe_names)},
+                {
+                    "role": "system",
+                    "content": "Above are a set of recipes your family already knows how to cook. Balance between using some of their familiar recipes and introducing new ones.",
+                },
+            ]
+        )
+
+    messages.append(
+        {
+            "role": "user",
+            "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
+        }
+    )
     )
 
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
@@ -128,11 +133,15 @@ def handle(
         temperature=1,
         n=1,
         stop=None,
-        functions=[
-            meal_function(
-                commentary_description="A detailed meal-by-meal description, explaining what factors \
+        tool_choice={"type": "function", "function": {"name": "generate_meal_plan"}},
+        tools=[
+            {
+                "type": "function",
+                "function": meal_function(
+                    commentary_description="A detailed meal-by-meal description, explaining what factors \
                 led to the meal being chosen, and whether it takes the user's special requests into account"
-            )  # type: ignore
+                ),  # type: ignore
+            }
         ],
     )
 
@@ -233,9 +242,14 @@ def download_known_recipes():
 
 
 def generate_meal_photo(openai_client, meal):
-    meal_image = dall_e_api_call(
-        openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
-    )
+    if os.environ["DALL_E_VERSION"] == "3":
+        meal_image = dall_e_3_api_call(
+            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+        )
+    else:
+        meal_image = dall_e_2_api_call(
+            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+        )
 
     return {
         "content": meal_image,
@@ -264,7 +278,7 @@ def post_with_markdown(image_files, slack_client, slack_channel_id):
     out_p = slack_client.chat_postMessage(channel=slack_channel_id, text=message)
 
 
-def dall_e_api_call(openai_client: OpenAI, meal_description):
+def dall_e_3_api_call(openai_client: OpenAI, meal_description):
     response = openai_client.images.generate(
         model="dall-e-3",
         prompt=meal_description,
@@ -277,6 +291,17 @@ def dall_e_api_call(openai_client: OpenAI, meal_description):
     return base64.b64decode(raw_b64)  # type: ignore
 
 
+def dall_e_2_api_call(openai_client: OpenAI, meal_description):
+    response = openai_client.images.generate(
+        model="dall-e-2",
+        prompt=meal_description,
+        n=1,
+        size="1024x1024",
+        response_format="b64_json",
+    )
+
+    raw_b64 = response.data[0].b64_json
+    return base64.b64decode(raw_b64)  # type: ignore
 def meal_function(commentary_description: str):
     return {
         "name": "generate_meal_plan",
@@ -286,7 +311,7 @@ def meal_function(commentary_description: str):
             "properties": {
                 "meal_list": {
                     "type": "array",
-                    "description": "List of at most 4 recipes tailored to the user's preferences",
+                    "description": "List of 4 recipes tailored to the user's preferences",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -306,6 +331,7 @@ def meal_function(commentary_description: str):
                     "description": commentary_description,
                 },
             },
+            "required": ["meal_list", "commentary"],
         },
     }
 

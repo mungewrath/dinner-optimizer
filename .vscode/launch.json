@@ -57,7 +57,9 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "env": {
-        "PAPRIKA_RECIPES_BUCKET": "mungewrath-dinner-optimizer"
+        "PAPRIKA_RECIPES_BUCKET": "mungewrath-dinner-optimizer",
+        "INCLUDE_PAPRIKA_RECIPES": "False",
+        "DALL_E_VERSION": "2"
       }
     },
     {
