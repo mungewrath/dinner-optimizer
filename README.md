@@ -15,7 +15,7 @@ Task log: See Todo list.md
 
 ## Deploying
 
-(To be scripted)
+The following steps are done by the `deploy.sh` script:
 1. Generate requirements files from poetry `poetry export -f requirements.txt --output src/<nested folder>/requirements.txt --without-hashes`
 1. `sam build --no-cached` - it needs to be non-cached to pick up changes to the shared/ module in other lambdas
 1. `sam deploy --guided`
