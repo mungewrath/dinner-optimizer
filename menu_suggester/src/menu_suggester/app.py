@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import random
 import sys
 import time
 from typing import Any
@@ -30,6 +31,57 @@ MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and 
 MODEL = "gpt-3.5-turbo"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
+
+CUISINES = [
+    "Italian",
+    "Mexican",
+    "Chinese",
+    "Japanese",
+    "Indian",
+    "French",
+    "Thai",
+    "Greek",
+    "Spanish",
+    "Mediterranean",
+    "Turkish",
+    "Vietnamese",
+    "Korean",
+    "American",
+    "Brazilian",
+    "Lebanese",
+    "Cuban",
+    "Argentinian",
+    "German",
+    "Swedish",
+    "Russian",
+    "African",
+    "British",
+    "Irish",
+    "Scottish",
+    "Caribbean",
+    "Portuguese",
+    "Moroccan",
+    "Peruvian",
+    "Israeli",
+    "Indonesian",
+    "Australian",
+    "Mexican-American",
+    "Tex-Mex",
+    "Cajun",
+    "Hawaiian",
+    "Fusion",
+    "Vegetarian",
+    "Vegan",
+    "Gluten-Free",
+    "Paleo",
+    "Keto",
+    "Low-Fat",
+    "Soul Food",
+    "Filipino",
+    "Jamaican",
+    "Haitian",
+    "Polish",
+]
 
 
 def lambda_handler(event, context):
@@ -121,6 +173,19 @@ def handle(
             "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
         }
     )
+
+    random_cuisines = []
+    while len(random_cuisines) < 4:
+        cuisine = random.choice(CUISINES)
+        if cuisine not in random_cuisines:
+            random_cuisines.append(cuisine)
+
+    messages.append(
+        {
+            "role": "user",
+            "content": "Think of recipes similar to the following cuisines: "
+            + ", ".join(random_cuisines),
+        }
     )
 
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
@@ -302,6 +367,8 @@ def dall_e_2_api_call(openai_client: OpenAI, meal_description):
 
     raw_b64 = response.data[0].b64_json
     return base64.b64decode(raw_b64)  # type: ignore
+
+
 def meal_function(commentary_description: str):
     return {
         "name": "generate_meal_plan",
