@@ -144,6 +144,8 @@ def handle(
     for ps in past_suggestions:
         messages.append({"role": ps.role, "content": ps.text})
 
+    messages.append(pick_random_cuisine_choices())
+
     messages.append(
         {
             "role": "system",
@@ -171,20 +173,6 @@ def handle(
         {
             "role": "user",
             "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
-        }
-    )
-
-    random_cuisines = []
-    while len(random_cuisines) < 4:
-        cuisine = random.choice(CUISINES)
-        if cuisine not in random_cuisines:
-            random_cuisines.append(cuisine)
-
-    messages.append(
-        {
-            "role": "user",
-            "content": "Think of recipes similar to the following cuisines: "
-            + ", ".join(random_cuisines),
         }
     )
 
@@ -304,6 +292,20 @@ def download_known_recipes():
     logger.info("recipe_names: %s", recipe_names)
 
     return recipe_names
+
+
+def pick_random_cuisine_choices():
+    random_cuisines = []
+    while len(random_cuisines) < 4:
+        cuisine = random.choice(CUISINES)
+        if cuisine not in random_cuisines:
+            random_cuisines.append(cuisine)
+
+    return {
+        "role": "system",
+        "content": "Think of recipes similar to the following cuisines: "
+        + ", ".join(random_cuisines),
+    }
 
 
 def generate_meal_photo(openai_client, meal):
