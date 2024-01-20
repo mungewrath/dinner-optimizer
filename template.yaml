@@ -9,6 +9,14 @@ Parameters:
   StoredRecipesBucketName:
     Type: String
     Description: Bucket where recipes from Paprika are stored
+  IncludePaprikaRecipes:
+    Type: String
+    Default: "True"
+    Description: Whether to include Paprika recipes in the prompt. Should be set to "True" to take effect, otherwise they are excluded.
+  DalleVersion:
+    Type: Number
+    Default: "3"
+    Description: API version of DALL-E to use. Should be either 2 or 3.
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -34,6 +42,8 @@ Resources:
       Environment:
         Variables:
           PAPRIKA_RECIPES_BUCKET: !Ref StoredRecipesBucketName
+          INCLUDE_PAPRIKA_RECIPES: !Ref IncludePaprikaRecipes
+          DALL_E_VERSION: !Ref DalleVersion
       Architectures:
         - x86_64
       Tags:

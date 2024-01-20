@@ -1,9 +1,12 @@
 import base64
 import json
 import os
+import random
+import sys
 import time
 from typing import Any
-import openai
+from openai import OpenAI
+
 import boto3
 
 import logging
@@ -29,17 +32,92 @@ MODEL = "gpt-3.5-turbo"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
+CUISINES = [
+    "Italian",
+    "Mexican",
+    "Chinese",
+    "Japanese",
+    "Indian",
+    "French",
+    "Thai",
+    "Greek",
+    "Spanish",
+    "Mediterranean",
+    "Turkish",
+    "Vietnamese",
+    "Korean",
+    "American",
+    "Brazilian",
+    "Lebanese",
+    "Cuban",
+    "Argentinian",
+    "German",
+    "Swedish",
+    "Russian",
+    "African",
+    "British",
+    "Irish",
+    "Scottish",
+    "Caribbean",
+    "Portuguese",
+    "Moroccan",
+    "Peruvian",
+    "Israeli",
+    "Indonesian",
+    "Australian",
+    "Mexican-American",
+    "Tex-Mex",
+    "Cajun",
+    "Hawaiian",
+    "Fusion",
+    "Vegetarian",
+    "Vegan",
+    "Gluten-Free",
+    "Paleo",
+    "Keto",
+    "Low-Fat",
+    "Soul Food",
+    "Filipino",
+    "Jamaican",
+    "Haitian",
+    "Polish",
+]
+
 
 def lambda_handler(event, context):
-    slack_channel_id = event["slack_channel_id"]
+    slack_client = None
+    slack_channel_id = None
 
-    credentials = creds.fetch_creds_from_secrets_manager()
+    try:
+        slack_channel_id = event["slack_channel_id"]
 
-    # Set your OpenAI API key
-    openai.api_key = credentials["OPENAI_API_KEY"]
+        credentials = creds.fetch_creds_from_secrets_manager()
 
-    slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+        openai_client = OpenAI(api_key=credentials["OPENAI_API_KEY"])
 
+        slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+
+        return handle(slack_channel_id, openai_client, slack_client)
+    except:
+        logger.error("Uncaught error occurred during handling", exc_info=True)
+
+        if slack_client is not None and slack_channel_id is not None:
+            slack_client.chat_postMessage(
+                channel=slack_channel_id,
+                text="I had trouble generating a menu :fearful: Sorry about that! I might need a little TLC.",
+            )
+    finally:
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"response": None}),
+        }
+
+
+def handle(
+    slack_channel_id: str,
+    openai_client: OpenAI,
+    slack_client: WebClient,
+):
     current_week = time_utils.most_recent_saturday()
 
     logger.info("Recommending for the week of %s", current_week)
@@ -76,43 +154,78 @@ def lambda_handler(event, context):
     for request in user_requests:
         messages.append({"role": request.role, "content": request.text})
 
-    known_recipe_names = download_known_recipes()
+    if os.environ.get("INCLUDE_PAPRIKA_RECIPES") == "True":
+        known_recipe_names = download_known_recipes()
 
-    messages.extend(
-        [
-            {"role": "system", "content": "\n".join(known_recipe_names)},
-            {
-                "role": "system",
-                "content": "Above are a set of recipes your family already knows how to cook. Balance between using some of their familiar recipes and introducing new ones.",
-            },
-            {
-                "role": "user",
-                "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
-            },
-        ]
+        messages.extend(
+            [
+                {"role": "system", "content": "\n".join(known_recipe_names)},
+                {
+                    "role": "system",
+                    "content": "Above are a set of recipes your family already knows how to cook. Balance between using some of their familiar recipes and introducing new ones.",
+                },
+            ]
+        )
+
+    messages.append(
+        {
+            "role": "user",
+            "content": "Generate a new set of suggested dinners for this week. Please take our particular requests for this week into account, and use different recipes than your previous suggestions",
+        }
+    )
+
+    random_cuisines = []
+    while len(random_cuisines) < 4:
+        cuisine = random.choice(CUISINES)
+        if cuisine not in random_cuisines:
+            random_cuisines.append(cuisine)
+
+    messages.append(
+        {
+            "role": "user",
+            "content": "Think of recipes similar to the following cuisines: "
+            + ", ".join(random_cuisines),
+        }
     )
 
     logger.info("messages being sent: %s", json.dumps(messages, indent=2))
 
     # Send priming instruction to OpenAI API and get response
-    response: Any = openai.ChatCompletion.create(
+    response = openai_client.chat.completions.create(
         model=MODEL,
-        messages=messages,
+        messages=messages,  # type: ignore
         max_tokens=1500,
-        temperature=0.7,
+        temperature=1,
         n=1,
         stop=None,
-        functions=[
-            meal_function(
-                commentary_description="A detailed meal-by-meal description, explaining what factors \
-                    led to the meal being chosen, and whether it takes the user's special requests into account"
-            )
+        tool_choice={"type": "function", "function": {"name": "generate_meal_plan"}},
+        tools=[
+            {
+                "type": "function",
+                "function": meal_function(
+                    commentary_description="A detailed meal-by-meal description, explaining what factors \
+                led to the meal being chosen, and whether it takes the user's special requests into account"
+                ),  # type: ignore
+            }
         ],
     )
 
-    logger.info("OpenAI response: %s", json.dumps(response, indent=2))
+    logger.info("OpenAI response: %s", response)
 
-    menu = json.loads(response.choices[0].message.function_call.arguments)
+    function_response = response.choices[0].message.tool_calls
+    if function_response is not None:
+        menu = json.loads(function_response[0].function.arguments)
+    else:
+        logger.warning(
+            "Function response under tool_calls was empty. Falling back to function_call"
+        )
+
+        function_response = response.choices[0].message.function_call
+        if function_response is not None:
+            menu = json.loads(function_response.arguments)
+        else:
+            logger.fatal("Function response under function_call was empty. Exiting.")
+            raise Exception("Unable to retrieve function call body")
 
     recorded_message = "Here's your suggested menu for this week:"
 
@@ -130,12 +243,14 @@ def lambda_handler(event, context):
 
     any_meals_failed_to_upload = False
 
+    # TODO: The DALLE calls can be parallelized
     meal_data = []
     for meal in menu["meal_list"]:
         try:
             meal_data.append(
-                post_meal_photo(
-                    slack_client, slack_channel_id, meal, any_meals_failed_to_upload
+                generate_meal_photo(
+                    openai_client,
+                    meal,
                 )
             )
         except:
@@ -147,12 +262,12 @@ def lambda_handler(event, context):
             )
             any_meals_failed_to_upload = True
 
-    slack_msg_v2_with_files(
-        message="\n".join(
+    upload = slack_client.files_upload_v2(
+        initial_comment="\n".join(
             f"• *{m['meal_name']}*: {m['meal_description']}\n"
             for m in menu["meal_list"]
         ),
-        file_uploads_data=meal_data,
+        file_uploads=meal_data,
         slack_client=slack_client,
         channel=slack_channel_id,
     )
@@ -191,21 +306,20 @@ def download_known_recipes():
     return recipe_names
 
 
-def post_meal_photo(slack_client, slack_channel_id, meal, any_meals_failed_to_upload):
-    meal_image = dall_e_api_call(f"{meal['meal_name']} - {meal['meal_description']}")
+def generate_meal_photo(openai_client, meal):
+    if os.environ["DALL_E_VERSION"] == "3":
+        meal_image = dall_e_3_api_call(
+            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+        )
+    else:
+        meal_image = dall_e_2_api_call(
+            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+        )
 
     return {
         "content": meal_image,
         "title": meal["meal_name"],
     }
-
-
-def slack_msg_v2_with_files(message, file_uploads_data, slack_client, channel):
-    upload = slack_client.files_upload_v2(
-        file_uploads=file_uploads_data,
-        channel=channel,
-        initial_comment=message,
-    )
 
 
 def post_with_markdown(image_files, slack_client, slack_channel_id):
@@ -229,13 +343,30 @@ def post_with_markdown(image_files, slack_client, slack_channel_id):
     out_p = slack_client.chat_postMessage(channel=slack_channel_id, text=message)
 
 
-def dall_e_api_call(meal_description):
-    response: Any = openai.Image.create(
-        prompt=meal_description, n=1, size="512x512", response_format="b64_json"
+def dall_e_3_api_call(openai_client: OpenAI, meal_description):
+    response = openai_client.images.generate(
+        model="dall-e-3",
+        prompt=meal_description,
+        n=1,
+        size="1024x1024",
+        response_format="b64_json",
     )
 
-    raw_b64 = response["data"][0]["b64_json"]
-    return base64.b64decode(raw_b64)
+    raw_b64 = response.data[0].b64_json
+    return base64.b64decode(raw_b64)  # type: ignore
+
+
+def dall_e_2_api_call(openai_client: OpenAI, meal_description):
+    response = openai_client.images.generate(
+        model="dall-e-2",
+        prompt=meal_description,
+        n=1,
+        size="1024x1024",
+        response_format="b64_json",
+    )
+
+    raw_b64 = response.data[0].b64_json
+    return base64.b64decode(raw_b64)  # type: ignore
 
 
 def meal_function(commentary_description: str):
@@ -247,7 +378,7 @@ def meal_function(commentary_description: str):
             "properties": {
                 "meal_list": {
                     "type": "array",
-                    "description": "List of at most 4 recipes tailored to the user's preferences",
+                    "description": "List of 4 recipes tailored to the user's preferences",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -267,6 +398,7 @@ def meal_function(commentary_description: str):
                     "description": commentary_description,
                 },
             },
+            "required": ["meal_list", "commentary"],
         },
     }
 
