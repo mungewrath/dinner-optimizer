@@ -296,7 +296,7 @@ def download_known_recipes():
 
 def pick_random_cuisine_choices():
     random_cuisines = []
-    while len(random_cuisines) < 4:
+    while len(random_cuisines) < 3:
         cuisine = random.choice(CUISINES)
         if cuisine not in random_cuisines:
             random_cuisines.append(cuisine)
