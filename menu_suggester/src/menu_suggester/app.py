@@ -28,7 +28,7 @@ MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and 
 
 # CHANNEL_ID = "C05JEBJHNQ4"
 
-MODEL = "gpt-3.5-turbo"
+MODEL = "gpt-4o-2024-08-06"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
