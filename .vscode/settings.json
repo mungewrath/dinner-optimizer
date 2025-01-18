@@ -10,7 +10,7 @@
     "${workspaceFolder}/shared/src/dinner_optimizer_shared"
   ],
   "editor.formatOnSave": true,
-  "python.testing.pytestArgs": ["shared"],
+  "python.testing.pytestArgs": ["--ignore=./tests"],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.analysis.typeCheckingMode": "basic"

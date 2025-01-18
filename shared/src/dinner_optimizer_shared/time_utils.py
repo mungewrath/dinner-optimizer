@@ -2,10 +2,14 @@ import datetime
 
 
 def most_recent_saturday():
-    return nth_most_recent_saturday(1)
+    return nth_most_recent_weekday(1, 5)
 
 
-def nth_most_recent_saturday(n: int):
+def most_recent_monday():
+    return nth_most_recent_weekday(1, 0)
+
+
+def nth_most_recent_weekday(n: int, weekday: int):
     if n < 1:
         raise Exception("n must be >= 1")
 
@@ -13,7 +17,9 @@ def nth_most_recent_saturday(n: int):
     today = datetime.date.today()
 
     # Calculate the number of days to subtract to reach the most recent Saturday
-    days_until_saturday = (today.weekday() - 5) % 7  # Saturday is weekday 5
+    days_until_saturday = (
+        today.weekday() - weekday
+    ) % 7  # Monday is weekday 0, Saturday is 6
 
     # Subtract the days to get the most recent Saturday
     recent_saturday = today - datetime.timedelta(

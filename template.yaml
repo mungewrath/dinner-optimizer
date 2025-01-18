@@ -52,7 +52,7 @@ Resources:
         ComplexScheduleEvent:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(0 21 ? * SAT *)
+            ScheduleExpression: cron(0 21 ? * FRI *)
             ScheduleExpressionTimezone: UTC
             Input: '{ "slack_channel_id": "C05JEBJHNQ4" }'
             # RetryPolicy:
@@ -84,7 +84,7 @@ Resources:
         MorningTrigger:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(0 16 ? * SAT *)
+            ScheduleExpression: cron(0 16 ? * FRI *)
             ScheduleExpressionTimezone: UTC
             Input: '{ "slack_channel_id": "C05JEBJHNQ4" }'
 
@@ -121,7 +121,7 @@ Resources:
   UserResponseTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: UserResponseTable
+      TableName: DinnerOptimizerHistory
       AttributeDefinitions:
         - AttributeName: Week
           AttributeType: S
@@ -226,7 +226,7 @@ Resources:
         MorningTrigger:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(0 13 ? * SAT *)
+            ScheduleExpression: cron(0 13 ? * FRI *)
             ScheduleExpressionTimezone: UTC
 # Outputs:
 # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

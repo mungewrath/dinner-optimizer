@@ -25,21 +25,11 @@ def lambda_handler(event, context):
 
     slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
 
-    past_recommendations: list[Interaction] = []
-    for n in reversed(range(2, 5)):
-        w = time_utils.nth_most_recent_saturday(n)
-        past_interactions = persistence.retrieve_interactions_for_week(w, channel_id)
-
-        # Add them to the current week's history.
-        bot_messages = list(filter(lambda x: x.role == "assistant", past_interactions))
-        if len(bot_messages) < 1:
-            continue
-
-        past_recommendations.append(bot_messages[-1])
+    past_recommendations = retrieve_past_week_recommendations(channel_id)
 
     for pr in past_recommendations:
         persistence.record_conversation_message(
-            pr, time_utils.most_recent_saturday(), channel_id
+            pr, time_utils.most_recent_monday(), channel_id
         )
 
     slack_client.chat_postMessage(
@@ -51,6 +41,22 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps({"success": True}),
     }
+
+
+def retrieve_past_week_recommendations(channel_id: str):
+    past_recommendations: list[Interaction] = []
+    for n in reversed(range(2, 5)):
+        w = time_utils.nth_most_recent_weekday(n, 0)
+        past_interactions = persistence.retrieve_interactions_for_week(w, channel_id)
+
+        # Add them to the current week's history.
+        bot_messages = list(filter(lambda x: x.role == "assistant", past_interactions))
+        if len(bot_messages) < 1:
+            continue
+
+        past_recommendations.append(bot_messages[-1])
+
+    return past_recommendations
 
 
 def cli():

@@ -58,7 +58,7 @@ def handle_user_message(payload):
         )
         return
 
-    current_week = time_utils.most_recent_saturday()
+    current_week = time_utils.most_recent_monday()
 
     entry = Interaction(
         role="user",

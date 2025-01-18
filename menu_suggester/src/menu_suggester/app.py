@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 consoleHandler = logging.StreamHandler()
 logger.addHandler(consoleHandler)
 
-TABLE_NAME = "UserResponseTable"
+TABLE_NAME = "DinnerOptimizerHistory"
 
 MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and Sauerkraut",\n      "meal_description": "Grilled sausages served with sauerkraut and mustard"\n    },\n    {\n      "meal_name": "Vegetable Stir-Fry",\n      "meal_description": "Assorted vegetables stir-fried with soy sauce and garlic"\n    },\n    {\n      "meal_name": "Korean Bibimbap",\n      "meal_description": "Mixed rice bowl topped with sautéed vegetables, tofu, and a fried egg"\n    },\n    {\n      "meal_name": "Spaghetti Carbonara",\n      "meal_description": "Pasta tossed in a creamy sauce with eggs, cheese, and bacon"\n    }\n  ]\n}'
 
@@ -118,7 +118,7 @@ def handle(
     openai_client: OpenAI,
     slack_client: WebClient,
 ):
-    current_week = time_utils.most_recent_saturday()
+    current_week = time_utils.most_recent_monday()
 
     logger.info("Recommending for the week of %s", current_week)
 

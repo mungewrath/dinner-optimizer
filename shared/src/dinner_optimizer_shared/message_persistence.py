@@ -4,15 +4,15 @@ import boto3
 
 from .interaction import Interaction
 
-dynamodb = boto3.client("dynamodb")
-
-TABLE_NAME = "UserResponseTable"
+TABLE_NAME = "DinnerOptimizerHistory"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
 def record_conversation_message(entry: Interaction, week: str, channel_id: str):
+    dynamodb = boto3.client("dynamodb")
+
     # Retrieve the existing item based on the key
     response = dynamodb.get_item(
         TableName=TABLE_NAME, Key={"Week": {"S": f"{week}_{channel_id}"}}
@@ -49,6 +49,8 @@ def record_conversation_message(entry: Interaction, week: str, channel_id: str):
 
 # Load existing chat messages for the given week from Dynamo, or an empty list of interactions if none exists
 def retrieve_interactions_for_week(week: str, channel_id: str) -> list[Interaction]:
+    dynamodb = boto3.client("dynamodb")
+
     response = dynamodb.get_item(
         TableName=TABLE_NAME, Key={"Week": {"S": f"{week}_{channel_id}"}}
     )
@@ -61,7 +63,8 @@ def retrieve_interactions_for_week(week: str, channel_id: str) -> list[Interacti
     )
 
     interactions = sorted(
-        existing_item["Interactions"]["L"], key=lambda x: x["M"]["time"]["S"]
+        existing_item["Interactions"]["L"],
+        key=lambda x: x["M"]["timestamp"]["S"],
     )
 
     logger.info("interactions: %s", json.dumps(interactions, indent=2))

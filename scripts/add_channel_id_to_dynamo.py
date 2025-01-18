@@ -4,7 +4,7 @@ import boto3
 dynamodb = boto3.resource("dynamodb")
 
 # Define the table name
-table_name = "UserResponseTable"  # Replace with your actual table name
+table_name = "DinnerOptimizerHistory"  # Replace with your actual table name
 
 # Define the suffix to append to the partition key
 suffix = "C05JEBJHNQ4"

@@ -14,6 +14,10 @@ boto3 = "^1.28.31"
 dinner-optimizer-shared = {path = "../shared", develop = true}
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-mock = "^3.14.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
