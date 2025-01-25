@@ -7,6 +7,8 @@ import time
 from typing import Any
 from openai import OpenAI
 
+import concurrent.futures
+
 import boto3
 
 import logging
@@ -231,24 +233,22 @@ def handle(
 
     any_meals_failed_to_upload = False
 
-    # TODO: The DALLE calls can be parallelized
     meal_data = []
-    for meal in menu["meal_list"]:
-        try:
-            meal_data.append(
-                generate_meal_photo(
-                    openai_client,
-                    meal,
-                )
-            )
-        except:
-            logger.error(
-                "Error uploading file for %s: %s",
-                meal["meal_name"],
-                meal["meal_description"],
-                exc_info=True,
-            )
-            any_meals_failed_to_upload = True
+    any_meals_failed_to_upload = False
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future_to_meal = {
+            executor.submit(generate_meal_photo, openai_client, meal): meal
+            for meal in menu["meal_list"]
+        }
+        for future in concurrent.futures.as_completed(future_to_meal):
+            result = future.result()
+            if result is not None:
+                meal_data.append(result)
+            else:
+                any_meals_failed_to_upload = True
+
+    logger.info("Image generation completed. Starting to upload to Slack")
 
     upload = slack_client.files_upload_v2(
         initial_comment="\n".join(
@@ -259,6 +259,8 @@ def handle(
         slack_client=slack_client,
         channel=slack_channel_id,
     )
+
+    logger.info("Image upload to Slack completed")
 
     if any_meals_failed_to_upload:
         msg = "I had some trouble uploading some of the pictures. Here's a text-only copy of the full menu:\n"
@@ -309,19 +311,29 @@ def pick_random_cuisine_choices():
 
 
 def generate_meal_photo(openai_client, meal):
-    if os.environ["DALL_E_VERSION"] == "3":
-        meal_image = dall_e_3_api_call(
-            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
-        )
-    else:
-        meal_image = dall_e_2_api_call(
-            openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
-        )
+    try:
+        if os.environ["DALL_E_VERSION"] == "3":
+            meal_image = dall_e_3_api_call(
+                openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+            )
+        else:
+            meal_image = dall_e_2_api_call(
+                openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
+            )
 
-    return {
-        "content": meal_image,
-        "title": meal["meal_name"],
-    }
+        return {
+            "content": meal_image,
+            "title": meal["meal_name"],
+        }
+
+    except Exception as e:
+        logger.error(
+            "Error uploading file for %s: %s",
+            meal["meal_name"],
+            meal["meal_description"],
+            exc_info=True,
+        )
+        return None
 
 
 def post_with_markdown(image_files, slack_client, slack_channel_id):
