@@ -6,7 +6,7 @@ phases:
       python: 3.11
     commands:
       - wget --no-verbose https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip -O sam.zip
-      - unzip sam.zip -d sam-installation
+      - unzip -qq sam.zip -d sam-installation
       - sudo ./sam-installation/install > /dev/null
       - pip install poetry==1.7.1
 
