@@ -238,8 +238,8 @@ def handle(
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_meal = {
-            executor.submit(generate_meal_photo, openai_client, meal): meal
-            for meal in menu["meal_list"]
+            executor.submit(generate_meal_photo, openai_client, meal, idx): meal
+            for idx, meal in enumerate(menu["meal_list"])
         }
         for future in concurrent.futures.as_completed(future_to_meal):
             result = future.result()
@@ -247,6 +247,8 @@ def handle(
                 meal_data.append(result)
             else:
                 any_meals_failed_to_upload = True
+
+    meal_data.sort(key=lambda x: x["sort_order"])
 
     logger.info("Image generation completed. Starting to upload to Slack")
 
@@ -310,7 +312,7 @@ def pick_random_cuisine_choices():
     }
 
 
-def generate_meal_photo(openai_client, meal):
+def generate_meal_photo(openai_client, meal, sort_order):
     try:
         if os.environ["DALL_E_VERSION"] == "3":
             meal_image = dall_e_3_api_call(
@@ -324,6 +326,7 @@ def generate_meal_photo(openai_client, meal):
         return {
             "content": meal_image,
             "title": meal["meal_name"],
+            "sort_order": sort_order,
         }
 
     except Exception as e:
