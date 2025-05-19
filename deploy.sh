@@ -1,5 +1,9 @@
 #!/bin/bash -x
 
+# NOTE - CodeBuild and CodePipeline both have hooks to deploy this code on commit. As of 10/25/24 it wasn't building properly, and needed a manual build from this machine. Need to find out which of them (if either) can build it correctly
+# Update 1/25/25: The local shared module reference has an absolute path which is breaking things.
+# poetry export doesn't work: "The command "export" does not exist."
+
 poetry export -C menu_suggester -f requirements.txt --output menu_suggester/src/menu_suggester/requirements.txt --without-hashes
 poetry export -C paprika_fetcher -f requirements.txt --output paprika_fetcher/src/paprika_fetcher/requirements.txt --without-hashes
 poetry export -C shared -f requirements.txt --output shared/src/dinner_optimizer_shared/requirements.txt --without-hashes
