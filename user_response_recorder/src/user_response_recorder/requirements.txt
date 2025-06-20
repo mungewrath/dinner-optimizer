@@ -1,6 +1,6 @@
 boto3==1.28.56 ; python_version >= "3.11" and python_version < "4.0"
 botocore==1.31.56 ; python_version >= "3.11" and python_version < "4.0"
-dinner-optimizer-shared @ file:///Users/mattunrath/ParDev/src/dinner-optimizer/shared ; python_version >= "3.11" and python_version < "4.0"
+dinner-optimizer-shared @ file:///Users/matthew.unrath/ParDev/src/side-projects/dinner-optimizer/shared ; python_version >= "3.11" and python_version < "4.0"
 jmespath==1.0.1 ; python_version >= "3.11" and python_version < "4.0"
 python-dateutil==2.8.2 ; python_version >= "3.11" and python_version < "4.0"
 python-dotenv==1.0.0 ; python_version >= "3.11" and python_version < "4.0"

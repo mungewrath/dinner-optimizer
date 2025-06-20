@@ -165,7 +165,7 @@ Resources:
           description: This API handles a route with a POST body to be placed on an SQS queue
           contact:
             email: matthew.unrath@gmail.com
-          version: 1.0.0
+          version: 1.0.1
         paths:
           /user_response:
             post:

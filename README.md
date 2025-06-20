@@ -2,13 +2,21 @@
 
 Task log: See Todo list.md
 
+## Prerequisites
+
+- Python 3.11
+- AWS SAM >= 1.140.0
+- Poetry 1.7.1
+
 ## Using the tool
+
 - The Dinner Optimizer will start a new thread every week, asking for customizations before it makes a meal plan.
 - After enough time has passed, it will roll up all the suggestions and - voila - make you a customized meal plan!
 - You may continue to send follow-up tweaks if you're not satisfied with the initial list, and Dinner Optimizer will note them down.
 - Type "conjure" at any time to generate a new meal list.
 
 ## Build notes
+
 - Currently using poetry for local dependency management
 - Format follows [src layout](https://informediq.com/python-src-layout-for-aws-lambdas/)
   - In theory, can be used to package lambdas for deployment, but would clash with SAM. There's maybe a way to make the two play nice
@@ -16,6 +24,7 @@ Task log: See Todo list.md
 ## Deploying
 
 The following steps are done by the `deploy.sh` script:
+
 1. Generate requirements files from poetry `poetry export -f requirements.txt --output src/<nested folder>/requirements.txt --without-hashes`
 1. `sam build --no-cached` - it needs to be non-cached to pick up changes to the shared/ module in other lambdas
 1. `sam deploy --guided`
@@ -36,8 +45,8 @@ You can find more information and examples about filtering Lambda function logs 
 
 Each Lambda has its own tests, defined in the "tests" subfolder of each function. To run them, use `poetry run pytest`.
 
-
 For SAM-level tests, do the following:
+
 ```bash
 dinner-optimizer$ pip install -r tests/requirements.txt --user
 # unit test
@@ -46,4 +55,3 @@ dinner-optimizer$ python -m pytest tests/unit -v
 # Create the env variable AWS_SAM_STACK_NAME with the name of the stack we are testing
 dinner-optimizer$ AWS_SAM_STACK_NAME=<stack-name> python -m pytest tests/integration -v
 ```
-
