@@ -31,6 +31,7 @@ Resources:
       CodeUri: menu_suggester/src/menu_suggester/
       Handler: app.lambda_handler
       Runtime: python3.11
+      MemorySize: 256
       Timeout: 90
       Policies:
         - DynamoDBCrudPolicy:
