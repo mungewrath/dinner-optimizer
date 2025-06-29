@@ -6,7 +6,7 @@ authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 boto3 = "^1.28.56"
 
 

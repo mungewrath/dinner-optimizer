@@ -4,9 +4,10 @@ Task log: See Todo list.md
 
 ## Prerequisites
 
-- Python 3.11
+- Python 3.12
 - AWS SAM >= 1.140.0
 - Poetry 1.7.1
+  - Set `poetry config virtualenvs.in-project true` to keep .venv behavior (see tips and tricks)
 
 ## Using the tool
 
@@ -20,6 +21,9 @@ Task log: See Todo list.md
 - Currently using poetry for local dependency management
 - Format follows [src layout](https://informediq.com/python-src-layout-for-aws-lambdas/)
   - In theory, can be used to package lambdas for deployment, but would clash with SAM. There's maybe a way to make the two play nice
+
+## Development Tips and Tricks
+- Previously, poetry's built-in .venv was used with VS Code to make intellisense pick up dependencies per-lambda. Make sure to "Select Interpreter" and enter the path to the .venv/bin/python.
 
 ## Deploying
 

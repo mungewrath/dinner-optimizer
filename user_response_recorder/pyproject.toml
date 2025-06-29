@@ -6,7 +6,7 @@ authors = ["Matthew Unrath <matthew.unrath@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 python-dotenv = "^1.0.0"
 slack-sdk = "^3.21.3"
 dinner-optimizer-shared = {path = "../shared", develop = true}

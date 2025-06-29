@@ -369,7 +369,7 @@ def dall_e_3_api_call(openai_client: OpenAI, meal_description):
         response_format="b64_json",
     )
 
-    raw_b64 = response.data[0].b64_json
+    raw_b64 = response.data[0].b64_json # type: ignore
     return base64.b64decode(raw_b64)  # type: ignore
 
 
@@ -382,7 +382,7 @@ def dall_e_2_api_call(openai_client: OpenAI, meal_description):
         response_format="b64_json",
     )
 
-    raw_b64 = response.data[0].b64_json
+    raw_b64 = response.data[0].b64_json # type: ignore
     return base64.b64decode(raw_b64)  # type: ignore
 
 
