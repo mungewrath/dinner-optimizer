@@ -7,6 +7,7 @@ Task log: See Todo list.md
 - Python 3.12
 - AWS SAM >= 1.140.0
 - Poetry 1.7.1
+  - This is primarily to keep the `poetry export` functionality. Can be safely upgraded once installing the export plugin has been thought about.
   - Set `poetry config virtualenvs.in-project true` to keep .venv behavior (see tips and tricks)
 
 ## Using the tool
