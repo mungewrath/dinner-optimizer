@@ -16,7 +16,7 @@ Parameters:
   DalleVersion:
     Type: Number
     Default: "3"
-    Description: API version of DALL-E to use. Should be either 2 or 3.
+    Description: API version of DALL-E to use. Should be either 2 (for GPT image-1-mini) or 3 (for GPT image-1).
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

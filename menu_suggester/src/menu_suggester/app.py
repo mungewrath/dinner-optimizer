@@ -30,7 +30,7 @@ MEAL_STUB = '{\n  "meal_list": [\n    {\n      "meal_name": "German Sausage and 
 
 # CHANNEL_ID = "C05JEBJHNQ4"
 
-MODEL = "gpt-4o-2024-08-06"
+MODEL = "gpt-5.6-terra"
 
 PAPRIKA_RECIPES_BUCKET = os.environ["PAPRIKA_RECIPES_BUCKET"]
 
@@ -184,7 +184,7 @@ def handle(
     response = openai_client.chat.completions.create(
         model=MODEL,
         messages=messages,  # type: ignore
-        max_tokens=1500,
+        max_completion_tokens=1500,
         temperature=1,
         n=1,
         stop=None,
@@ -198,6 +198,7 @@ def handle(
                 ),  # type: ignore
             }
         ],
+        reasoning_effort="none",
     )
 
     logger.info("OpenAI response: %s", response)
@@ -314,14 +315,11 @@ def pick_random_cuisine_choices():
 
 def generate_meal_photo(openai_client, meal, sort_order):
     try:
-        if os.environ["DALL_E_VERSION"] == "3":
-            meal_image = dall_e_3_api_call(
-                openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
-            )
-        else:
-            meal_image = dall_e_2_api_call(
-                openai_client, f"{meal['meal_name']} - {meal['meal_description']}"
-            )
+        model_id = "gpt-image-1" if os.environ["DALL_E_VERSION"] == "3" else "gpt-image-1-mini"
+
+        meal_image = gpt_image_api_call(
+            openai_client, model_id, f"{meal['meal_name']} - {meal['meal_description']}"
+        )
 
         return {
             "content": meal_image,
@@ -360,26 +358,12 @@ def post_with_markdown(image_files, slack_client, slack_channel_id):
     out_p = slack_client.chat_postMessage(channel=slack_channel_id, text=message)
 
 
-def dall_e_3_api_call(openai_client: OpenAI, meal_description):
+def gpt_image_api_call(openai_client: OpenAI, model:str, meal_description: str):
     response = openai_client.images.generate(
-        model="dall-e-3",
+        model=model,
         prompt=meal_description,
         n=1,
         size="1024x1024",
-        response_format="b64_json",
-    )
-
-    raw_b64 = response.data[0].b64_json # type: ignore
-    return base64.b64decode(raw_b64)  # type: ignore
-
-
-def dall_e_2_api_call(openai_client: OpenAI, meal_description):
-    response = openai_client.images.generate(
-        model="dall-e-2",
-        prompt=meal_description,
-        n=1,
-        size="1024x1024",
-        response_format="b64_json",
     )
 
     raw_b64 = response.data[0].b64_json # type: ignore
