@@ -48,8 +48,15 @@ def handle_user_message(payload):
         logger.info("Hearing myself; exiting without actions")
         return api_gateway_response({})
 
+    credentials = creds.fetch_creds_from_secrets_manager()
+
+    slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
+
     if "conjure" in user_response.lower():
         logger.info("Invoking menu suggestion lambda")
+        slack_client.reactions_add(
+            channel=slack_channel_id, timestamp=timestamp, name="thinking_face"
+        )
         client = boto3.client("lambda")
         lambda_name = os.environ["MENU_SUGGESTER_LAMBDA_ARN"]
         event = {"slack_channel_id": slack_channel_id}
@@ -67,17 +74,12 @@ def handle_user_message(payload):
         timestamp=timestamp,
     )
 
-    credentials = creds.fetch_creds_from_secrets_manager()
-
-    slack_client = WebClient(token=credentials["SLACK_BOT_TOKEN"])
-
     db.record_conversation_message(entry, current_week, slack_channel_id)
 
     logger.info("Message recorded.")
 
-    slack_client.chat_postMessage(
-        channel=slack_channel_id,
-        text=f">{user_response}\nGot it :thumbsup:",
+    slack_client.reactions_add(
+        channel=slack_channel_id, timestamp=timestamp, name="thumbsup"
     )
 
 
