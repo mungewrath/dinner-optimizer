@@ -79,6 +79,7 @@ CUISINES = [
     "Polish",
 ]
 
+IMAGE_STYLE = "Ghibli style photo"
 
 def lambda_handler(event, context):
     slack_client = None
@@ -316,7 +317,7 @@ def generate_meal_photo(openai_client, meal, sort_order):
         model_id = "gpt-image-1" if os.environ["DALL_E_VERSION"] == "3" else "gpt-image-1-mini"
 
         meal_image = gpt_image_api_call(
-            openai_client, model_id, f"{meal['meal_name']} - {meal['meal_description']}"
+            openai_client, model_id, f"{IMAGE_STYLE}: {meal['meal_name']} - {meal['meal_description']}"
         )
 
         return {
