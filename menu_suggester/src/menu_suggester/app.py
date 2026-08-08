@@ -6,6 +6,7 @@ import sys
 import time
 from typing import Any
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageFunctionToolCall
 
 import concurrent.futures
 
@@ -198,7 +199,11 @@ def handle(
 
     function_response = response.choices[0].message.tool_calls
     if function_response is not None:
-        menu = json.loads(function_response[0].function.arguments)
+        tool_call = function_response[0]
+        # Calms down pylance type checking, which is confused by the Literal type in the tool_call.type field
+        if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
+            raise Exception(f"Expected a function tool call, got {tool_call.type}")
+        menu = json.loads(tool_call.function.arguments)
     else:
         logger.warning(
             "Function response under tool_calls was empty. Falling back to function_call"
