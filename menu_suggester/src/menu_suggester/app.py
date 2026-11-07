@@ -188,8 +188,8 @@ def handle(
             {
                 "type": "function",
                 "function": meal_function(
-                    commentary_description="A detailed meal-by-meal description, explaining what factors \
-                led to the meal being chosen, and whether it takes the user's special requests into account"
+                    commentary_description="A single paragraph description, explaining what factors \
+                led to the meals being chosen, and whether they takes the user's special requests into account"
                 ),  # type: ignore
             }
         ],
@@ -388,7 +388,7 @@ def meal_function(commentary_description: str):
                             },
                             "meal_description": {
                                 "type": "string",
-                                "description": "a description of the meal",
+                                "description": "a description of the meal and how it's tailored to the family, max 30 words",
                             },
                         },
                     },
